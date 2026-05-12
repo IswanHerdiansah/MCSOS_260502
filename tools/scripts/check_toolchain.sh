@@ -45,4 +45,11 @@ if [ "$OVMF_FOUND" -eq 0 ]; then
   STATUS=1
 fi
 
+# Optional: cross-compiler detection
+if command -v x86_64-elf-gcc >/dev/null 2>&1; then
+  echo "OK: x86_64-elf-gcc available: $(command -v x86_64-elf-gcc)"
+else
+  echo "INFO: x86_64-elf-gcc not found (optional, using clang instead)"
+fi
+
 exit "$STATUS"

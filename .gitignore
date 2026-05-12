@@ -6,5 +6,7 @@ build/
 *.img
 *.map
 *.log
+*.d
 .cache/
 .vscode/
+third_party/limine/

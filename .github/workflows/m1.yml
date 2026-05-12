@@ -1,0 +1,26 @@
+name: M1 Toolchain Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential git make cmake ninja-build pkg-config \
+            clang lld llvm binutils nasm \
+            qemu-system-x86 qemu-utils ovmf \
+            python3 \
+            file
+
+      - name: Run M1 test
+        run: make test
