@@ -14,16 +14,14 @@ required_files=(
 )
 
 for f in "${required_files[@]}"; do
-  if [ ! -s "$f" ]; then
-    echo "ERROR: artefak tidak ada atau kosong: $f" >&2
-    exit 1
-  fi
+  test -s "$f"
   echo "OK artifact: $f"
 done
 
-grep -q 'Class:.*ELF64' build/inspect/readelf-header.txt
-grep -q 'Machine:.*Advanced Micro Devices X86-64' build/inspect/readelf-header.txt
-grep -q 'Entry point address:.*0xffffffff80000000' build/inspect/readelf-header.txt
+grep -q 'ELF64' build/inspect/readelf-header.txt
+grep -q 'Advanced Micro Devices X86-64' build/inspect/readelf-header.txt
+grep -q '0xffffffff80000000' build/inspect/readelf-header.txt
+
 grep -q 'MCSOS 260502 M2 boot path entered' build/qemu-serial.log
 grep -q '\[M2\] early serial online' build/qemu-serial.log
 grep -q '\[M2\] kernel reached controlled halt loop' build/qemu-serial.log

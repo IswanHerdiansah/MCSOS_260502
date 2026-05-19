@@ -1,38 +1,36 @@
 #include <stdint.h>
+#include <stddef.h>
+#include <mcsos/arch/io.h>
 
-static inline void outb(uint16_t port, uint8_t value) {
-    __asm__ volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
+#define COM1_PORT 0x3F8u
+
+static int serial_transmit_empty(void) {
+    return (inb((uint16_t)(COM1_PORT + 5u)) & 0x20u) != 0;
 }
 
 void serial_init(void) {
-    outb(0x3F8 + 1, 0x00);
-    outb(0x3F8 + 3, 0x80);
-    outb(0x3F8 + 0, 0x03);
-    outb(0x3F8 + 1, 0x00);
-    outb(0x3F8 + 3, 0x03);
-    outb(0x3F8 + 2, 0xC7);
-    outb(0x3F8 + 4, 0x0B);
+    outb((uint16_t)(COM1_PORT + 1u), 0x00u);
+    outb((uint16_t)(COM1_PORT + 3u), 0x80u);
+    outb((uint16_t)(COM1_PORT + 0u), 0x03u);
+    outb((uint16_t)(COM1_PORT + 1u), 0x00u);
+    outb((uint16_t)(COM1_PORT + 3u), 0x03u);
+    outb((uint16_t)(COM1_PORT + 2u), 0xC7u);
+    outb((uint16_t)(COM1_PORT + 4u), 0x0Bu);
 }
 
-static int serial_ready(void) {
-    unsigned char r;
-    __asm__ volatile (
-        "inb %1, %0"
-        : "=a"(r)
-        : "Nd"((uint16_t)(0x3F8 + 5))
-    );
-    return r & 0x20;
-}
-
-static void serial_putchar(char c) {
-    while (!serial_ready()) {
+void serial_putc(char c) {
+    if (c == '\n') {
+        serial_putc('\r');
     }
-
-    outb(0x3F8, (uint8_t)c);
+    while (!serial_transmit_empty()) { }
+    outb((uint16_t)COM1_PORT, (uint8_t)c);
 }
 
 void serial_write(const char *s) {
-    while (*s) {
-        serial_putchar(*s++);
+    if (s == (const char *)0) {
+        return;
+    }
+    while (*s != '\0') {
+        serial_putc(*s++);
     }
 }

@@ -1,28 +1,38 @@
-ENTRY(_start)
+OUTPUT_FORMAT(elf64-x86-64)
+ENTRY(kmain)
+
+PHDRS
+{
+    text PT_LOAD FLAGS(5);
+    rodata PT_LOAD FLAGS(4);
+    data PT_LOAD FLAGS(6);
+}
 
 SECTIONS
 {
     . = 0xffffffff80000000;
+    __kernel_start = .;
 
-    .text :
+    .text : ALIGN(4096)
     {
-        KEEP(*(.text._start))
-        *(.text*)
-    }
+        *(.text .text.*)
+    } :text
 
-    .rodata :
+    .rodata : ALIGN(4096)
     {
-        *(.rodata*)
-    }
+        *(.rodata .rodata.*)
+    } :rodata
 
-    .data :
+    .data : ALIGN(4096)
     {
-        *(.data*)
-    }
+        *(.data .data.*)
+    } :data
 
-    .bss :
+    .bss : ALIGN(4096)
     {
         *(COMMON)
-        *(.bss*)
-    }
+        *(.bss .bss.*)
+    } :data
+
+    __kernel_end = .;
 }
