@@ -1,0 +1,17 @@
+# M3 evidence manifest
+generated_utc=2026-05-19T14:45:43Z
+commit=1d4278204db830108460a4b7598552c4ddc6869c
+clang=Ubuntu clang version 14.0.0-1ubuntu1.1
+lld=Ubuntu LLD 14.0.0 (compatible with GNU linkers)
+qemu=QEMU emulator version 6.2.0 (Debian 1:6.2+dfsg-2ubuntu6.30)
+kernel.disasm.txt
+kernel.elf
+kernel.map
+kernel.readelf.header.txt
+kernel.readelf.programs.txt
+kernel.syms.txt
+m3_audit_disasm.txt
+m3_audit_readelf_header.txt
+m3_audit_readelf_programs.txt
+m3_audit_symbols.txt
+manifest.txt

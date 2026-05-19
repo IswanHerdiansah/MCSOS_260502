@@ -7,3 +7,12 @@ iso_root/
 *.o
 *.d
 third_party/limine/
+build/
+iso_root/
+limine/
+*.iso
+*.log
+*.o
+*.elf
+*.map
+*.disasm.txt

@@ -36,3 +36,4 @@ SECTIONS
 
     __kernel_end = .;
 }
+
