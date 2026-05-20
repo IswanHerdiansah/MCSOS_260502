@@ -9,12 +9,12 @@ Program Headers:
   LOAD           0x0000000000001000 0xffffffff80000000 0xffffffff80000000
                  0x00000000000009c9 0x00000000000009c9  R E    0x1000
   LOAD           0x0000000000002000 0xffffffff80001000 0xffffffff80001000
-                 0x0000000000000211 0x0000000000000211  R      0x1000
+                 0x00000000000002a0 0x00000000000002a0  R      0x1000
   LOAD           0x0000000000003000 0xffffffff80002000 0xffffffff80002000
                  0x0000000000000008 0x0000000000001004  RW     0x1000
 
  Section to Segment mapping:
   Segment Sections...
    00     .text 
-   01     .rodata 
+   01     .rodata .limine_requests_start .limine_requests .limine_requests_end 
    02     .data .bss 

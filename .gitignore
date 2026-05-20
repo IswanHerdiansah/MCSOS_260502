@@ -16,3 +16,14 @@ limine/
 *.elf
 *.map
 *.disasm.txt
+build/
+iso_root/
+limine/
+*.iso
+*.log
+*.o
+*.elf
+*.map
+*.disasm.txt
+ovmf/
+limine.cfg

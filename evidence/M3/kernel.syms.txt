@@ -28,6 +28,10 @@ ffffffff800007c0 T memcpy
 ffffffff80000830 T memmove
 ffffffff80000950 T serial_write_hex64
 ffffffff80001200 r log_hex64.digits
+ffffffff80001220 d limine_requests_start_marker
+ffffffff80001240 d limine_base_revision
+ffffffff80001258 d fb_request
+ffffffff80001290 d limine_requests_end_marker
 ffffffff80002000 d hex
 ffffffff80003000 b g_log_ready
 ffffffff80003004 B __kernel_end

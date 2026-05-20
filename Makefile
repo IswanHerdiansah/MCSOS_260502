@@ -1,31 +1,56 @@
 .RECIPEPREFIX := >
 SHELL := /usr/bin/env bash
 
-BUILD_DIR := build
-KERNEL := $(BUILD_DIR)/kernel.elf
+# ── Direktori ───────────────────────────────────────────────────────────────
+BUILD_DIR  := build
+ISO_ROOT   := iso_root
+LIMINE_DIR := limine
+
+# ── Artefak utama ───────────────────────────────────────────────────────────
+KERNEL       := $(BUILD_DIR)/kernel.elf
 PANIC_KERNEL := $(BUILD_DIR)/kernel.panic.elf
-MAP := $(BUILD_DIR)/kernel.map
-PANIC_MAP := $(BUILD_DIR)/kernel.panic.map
-DISASM := $(BUILD_DIR)/kernel.disasm.txt
-SYMS := $(BUILD_DIR)/kernel.syms.txt
-CC := clang
-LD := ld.lld
+MAP          := $(BUILD_DIR)/kernel.map
+PANIC_MAP    := $(BUILD_DIR)/kernel.panic.map
+DISASM       := $(BUILD_DIR)/kernel.disasm.txt
+SYMS         := $(BUILD_DIR)/kernel.syms.txt
+ISO          := $(BUILD_DIR)/mcsos.iso
+PANIC_ISO    := $(BUILD_DIR)/mcsos.panic.iso
+
+# ── Toolchain ───────────────────────────────────────────────────────────────
+CC      := clang
+LD      := ld.lld
 OBJDUMP := objdump
 READELF := readelf
-NM := nm
+NM      := nm
 
-COMMON_CFLAGS := --target=x86_64-unknown-none-elf -std=c17 -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check -fno-pic -fno-pie -fno-lto -m64 -march=x86-64 -mabi=sysv -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -mcmodel=kernel -Wall -Wextra -Werror -Ikernel/arch/x86_64/include -Ikernel/include
-CFLAGS := $(COMMON_CFLAGS)
+# ── Flags kompilasi ─────────────────────────────────────────────────────────
+COMMON_CFLAGS := \
+    --target=x86_64-unknown-none-elf -std=c17 \
+    -ffreestanding -fno-builtin -fno-stack-protector -fno-stack-check \
+    -fno-pic -fno-pie -fno-lto \
+    -m64 -march=x86-64 -mabi=sysv -mno-red-zone \
+    -mno-mmx -mno-sse -mno-sse2 -mcmodel=kernel \
+    -Wall -Wextra -Werror \
+    -Ikernel/arch/x86_64/include -Ikernel/include
+
+CFLAGS       := $(COMMON_CFLAGS)
 PANIC_CFLAGS := $(COMMON_CFLAGS) -DMCSOS_M3_TRIGGER_PANIC=1
-LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -T linker.ld
-SRC_C := $(shell find kernel -name '*.c' | LC_ALL=C sort)
-OBJ := $(patsubst %.c,$(BUILD_DIR)/normal/%.o,$(SRC_C))
+LDFLAGS      := -nostdlib -static -z max-page-size=0x1000 -T linker.ld
+
+# ── Sumber ──────────────────────────────────────────────────────────────────
+SRC_C     := $(shell find kernel -name '*.c' | LC_ALL=C sort)
+OBJ       := $(patsubst %.c,$(BUILD_DIR)/normal/%.o,$(SRC_C))
 PANIC_OBJ := $(patsubst %.c,$(BUILD_DIR)/panic/%.o,$(SRC_C))
 
-.PHONY: all build panic inspect audit clean distclean
+# ── Phony targets ───────────────────────────────────────────────────────────
+.PHONY: all build panic inspect audit image image-panic clean distclean meta
 
+# ── Default ─────────────────────────────────────────────────────────────────
 all: build inspect
 
+# ════════════════════════════════════════════════════════════════════════════
+# BUILD
+# ════════════════════════════════════════════════════════════════════════════
 build: $(KERNEL)
 
 panic: $(PANIC_KERNEL)
@@ -46,6 +71,9 @@ $(PANIC_KERNEL): $(PANIC_OBJ) linker.ld
 >mkdir -p $(BUILD_DIR)
 >$(LD) $(LDFLAGS) -Map=$(PANIC_MAP) -o $@ $(PANIC_OBJ)
 
+# ════════════════════════════════════════════════════════════════════════════
+# INSPECT
+# ════════════════════════════════════════════════════════════════════════════
 inspect: $(KERNEL)
 >$(READELF) -h $(KERNEL) > $(BUILD_DIR)/kernel.readelf.header.txt
 >$(READELF) -l $(KERNEL) > $(BUILD_DIR)/kernel.readelf.programs.txt
@@ -57,30 +85,67 @@ inspect: $(KERNEL)
 >grep -q 'kernel_panic_at' $(SYMS)
 >grep -q 'cpu_halt_forever' $(DISASM)
 
-# audit memeriksa undefined symbol dan properti ELF yang harus tetap stabil.
+# ════════════════════════════════════════════════════════════════════════════
+# AUDIT
+# ════════════════════════════════════════════════════════════════════════════
 audit: inspect panic
 >! $(NM) -u $(KERNEL) | grep .
 >! $(NM) -u $(PANIC_KERNEL) | grep .
->grep -q 'kernel_panic_at' $(BUILD_DIR)/kernel.disasm.txt
+>grep -q 'kernel_panic_at' $(DISASM)
 >$(READELF) -S $(KERNEL) | grep -q '.text'
 >$(READELF) -S $(KERNEL) | grep -q '.rodata'
 
+# ════════════════════════════════════════════════════════════════════════════
+# IMAGE — helper internal untuk isi iso_root
+# ════════════════════════════════════════════════════════════════════════════
+define build_iso
+	@test -f $(LIMINE_DIR)/limine-bios.sys || \
+	    { echo "ERROR: jalankan: make -C limine"; exit 1; }
+	rm -rf $(ISO_ROOT)
+	mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
+	cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
+	cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
+	cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
+	cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
+	cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
+	cp limine.conf                        $(ISO_ROOT)/boot/limine/limine.conf
+	cp limine.conf                        $(ISO_ROOT)/EFI/BOOT/limine.conf
+	xorriso -as mkisofs \
+	    -b boot/limine/limine-bios-cd.bin \
+	    -no-emul-boot -boot-load-size 4 -boot-info-table \
+	    --efi-boot boot/limine/limine-uefi-cd.bin \
+	    -efi-boot-part --efi-boot-image --protective-msdos-label \
+	    $(ISO_ROOT) -o $(2) 2>/dev/null
+	$(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
+	@echo "ISO selesai: $(2)"
+endef
+
+image: $(ISO)
+
+$(ISO): $(KERNEL) limine.conf
+>$(call build_iso,$(KERNEL),$(ISO))
+
+image-panic: $(PANIC_ISO)
+
+$(PANIC_ISO): $(PANIC_KERNEL) limine.conf
+>$(call build_iso,$(PANIC_KERNEL),$(PANIC_ISO))
+
+# ════════════════════════════════════════════════════════════════════════════
+# CLEAN
+# ════════════════════════════════════════════════════════════════════════════
 clean:
->rm -rf $(BUILD_DIR)
+>rm -rf $(BUILD_DIR) $(ISO_ROOT)
 
 distclean: clean
->rm -rf iso_root limine
+>rm -rf limine ovmf
 
-# =========================
-# META (REQUIRED FOR M0/M1 PREFLIGHT)
-# =========================
-
+# ════════════════════════════════════════════════════════════════════════════
+# META
+# ════════════════════════════════════════════════════════════════════════════
 meta:
->mkdir -p build/meta
->echo "clang: $(shell clang --version | head -n 1)" > build/meta/toolchain-versions.txt
->echo "ld.lld: $(shell ld.lld --version | head -n 1)" >> build/meta/toolchain-versions.txt
->echo "qemu: $(shell qemu-system-x86_64 --version | head -n 1)" >> build/meta/toolchain-versions.txt
->echo "xorriso: $(shell xorriso --version | head -n 1)" >> build/meta/toolchain-versions.txt
->echo "make: $(shell make --version | head -n 1)" >> build/meta/toolchain-versions.txt
-
-.PHONY: meta
+>mkdir -p $(BUILD_DIR)/meta
+>echo "clang: $$(clang --version | head -n 1)"              > $(BUILD_DIR)/meta/toolchain-versions.txt
+>echo "ld.lld: $$(ld.lld --version | head -n 1)"           >> $(BUILD_DIR)/meta/toolchain-versions.txt
+>echo "qemu: $$(qemu-system-x86_64 --version | head -n 1)" >> $(BUILD_DIR)/meta/toolchain-versions.txt
+>echo "xorriso: $$(xorriso --version 2>&1 | head -n 1)"    >> $(BUILD_DIR)/meta/toolchain-versions.txt
+>echo "make: $$(make --version | head -n 1)"                >> $(BUILD_DIR)/meta/toolchain-versions.txt

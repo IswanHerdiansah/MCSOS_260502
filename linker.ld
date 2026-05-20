@@ -3,14 +3,15 @@ ENTRY(kmain)
 
 PHDRS
 {
-    text PT_LOAD FLAGS(5);
-    rodata PT_LOAD FLAGS(4);
-    data PT_LOAD FLAGS(6);
+    text    PT_LOAD FLAGS(5);
+    rodata  PT_LOAD FLAGS(4);
+    data    PT_LOAD FLAGS(6);
 }
 
 SECTIONS
 {
     . = 0xffffffff80000000;
+
     __kernel_start = .;
 
     .text : ALIGN(4096)
@@ -21,6 +22,22 @@ SECTIONS
     .rodata : ALIGN(4096)
     {
         *(.rodata .rodata.*)
+    } :rodata
+
+    /* Limine request sections — harus masuk ke rodata segment */
+    .limine_requests_start : ALIGN(8)
+    {
+        KEEP(*(.limine_requests_start))
+    } :rodata
+
+    .limine_requests : ALIGN(8)
+    {
+        KEEP(*(.limine_requests))
+    } :rodata
+
+    .limine_requests_end : ALIGN(8)
+    {
+        KEEP(*(.limine_requests_end))
     } :rodata
 
     .data : ALIGN(4096)
@@ -36,4 +53,3 @@ SECTIONS
 
     __kernel_end = .;
 }
-
