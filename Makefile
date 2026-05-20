@@ -7,14 +7,20 @@ ISO_ROOT   := iso_root
 LIMINE_DIR := limine
 
 # ── Artefak utama ───────────────────────────────────────────────────────────
-KERNEL       := $(BUILD_DIR)/kernel.elf
-PANIC_KERNEL := $(BUILD_DIR)/kernel.panic.elf
-MAP          := $(BUILD_DIR)/kernel.map
-PANIC_MAP    := $(BUILD_DIR)/kernel.panic.map
-DISASM       := $(BUILD_DIR)/kernel.disasm.txt
-SYMS         := $(BUILD_DIR)/kernel.syms.txt
-ISO          := $(BUILD_DIR)/mcsos.iso
-PANIC_ISO    := $(BUILD_DIR)/mcsos.panic.iso
+KERNEL        := $(BUILD_DIR)/kernel.elf
+BP_KERNEL     := $(BUILD_DIR)/kernel.breakpoint.elf
+PANIC_KERNEL  := $(BUILD_DIR)/kernel.panic.elf
+
+MAP           := $(BUILD_DIR)/kernel.map
+BP_MAP        := $(BUILD_DIR)/kernel.breakpoint.map
+PANIC_MAP     := $(BUILD_DIR)/kernel.panic.map
+
+DISASM        := $(BUILD_DIR)/kernel.disasm.txt
+SYMS          := $(BUILD_DIR)/kernel.syms.txt
+
+ISO           := $(BUILD_DIR)/mcsos.iso
+PANIC_ISO     := $(BUILD_DIR)/mcsos.panic.iso
+BP_ISO        := $(BUILD_DIR)/mcsos.breakpoint.iso
 
 # ── Toolchain ───────────────────────────────────────────────────────────────
 CC      := clang
@@ -33,18 +39,42 @@ COMMON_CFLAGS := \
     -Wall -Wextra -Werror \
     -Ikernel/arch/x86_64/include -Ikernel/include
 
-CFLAGS       := $(COMMON_CFLAGS)
-PANIC_CFLAGS := $(COMMON_CFLAGS) -DMCSOS_M3_TRIGGER_PANIC=1
-LDFLAGS      := -nostdlib -static -z max-page-size=0x1000 -T linker.ld
+COMMON_ASFLAGS := \
+    --target=x86_64-unknown-none-elf \
+    -ffreestanding -fno-pic -fno-pie \
+    -m64 -mno-red-zone \
+    -Wall -Wextra -Werror \
+    -Ikernel/arch/x86_64/include -Ikernel/include
+
+CFLAGS        := $(COMMON_CFLAGS)
+ASFLAGS       := $(COMMON_ASFLAGS)
+
+BP_CFLAGS     := $(COMMON_CFLAGS) -DMCSOS_M4_TRIGGER_BREAKPOINT=1
+PANIC_CFLAGS  := $(COMMON_CFLAGS) -DMCSOS_M3_TRIGGER_PANIC=1 -DMCSOS_M4_TRIGGER_PANIC=1
+
+LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -T linker.ld
 
 # ── Sumber ──────────────────────────────────────────────────────────────────
-SRC_C     := $(shell find kernel -name '*.c' | LC_ALL=C sort)
-OBJ       := $(patsubst %.c,$(BUILD_DIR)/normal/%.o,$(SRC_C))
-PANIC_OBJ := $(patsubst %.c,$(BUILD_DIR)/panic/%.o,$(SRC_C))
+SRC_C := $(shell find kernel -name '*.c' | LC_ALL=C sort)
+SRC_S := $(shell find kernel -name '*.S' | LC_ALL=C sort)
+
+OBJ := \
+    $(patsubst %.c,$(BUILD_DIR)/normal/%.o,$(SRC_C)) \
+    $(patsubst %.S,$(BUILD_DIR)/normal/%.o,$(SRC_S))
+
+BP_OBJ := \
+    $(patsubst %.c,$(BUILD_DIR)/breakpoint/%.o,$(SRC_C)) \
+    $(patsubst %.S,$(BUILD_DIR)/breakpoint/%.o,$(SRC_S))
+
+PANIC_OBJ := \
+    $(patsubst %.c,$(BUILD_DIR)/panic/%.o,$(SRC_C)) \
+    $(patsubst %.S,$(BUILD_DIR)/panic/%.o,$(SRC_S))
 
 # ── Phony targets ───────────────────────────────────────────────────────────
-.PHONY: all build panic inspect audit image image-panic clean distclean meta
-
+.PHONY: all build breakpoint panic inspect audit \
+image image-panic image-breakpoint \
+iso iso-panic iso-breakpoint \
+clean distclean meta
 # ── Default ─────────────────────────────────────────────────────────────────
 all: build inspect
 
@@ -53,19 +83,41 @@ all: build inspect
 # ════════════════════════════════════════════════════════════════════════════
 build: $(KERNEL)
 
+breakpoint: $(BP_KERNEL)
+
 panic: $(PANIC_KERNEL)
 
 $(BUILD_DIR)/normal/%.o: %.c
 >mkdir -p $(dir $@)
 >$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/normal/%.o: %.S
+>mkdir -p $(dir $@)
+>$(CC) $(ASFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/breakpoint/%.o: %.c
+>mkdir -p $(dir $@)
+>$(CC) $(BP_CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/breakpoint/%.o: %.S
+>mkdir -p $(dir $@)
+>$(CC) $(ASFLAGS) -c $< -o $@
+
 $(BUILD_DIR)/panic/%.o: %.c
 >mkdir -p $(dir $@)
 >$(CC) $(PANIC_CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/panic/%.o: %.S
+>mkdir -p $(dir $@)
+>$(CC) $(ASFLAGS) -c $< -o $@
+
 $(KERNEL): $(OBJ) linker.ld
 >mkdir -p $(BUILD_DIR)
 >$(LD) $(LDFLAGS) -Map=$(MAP) -o $@ $(OBJ)
+
+$(BP_KERNEL): $(BP_OBJ) linker.ld
+>mkdir -p $(BUILD_DIR)
+>$(LD) $(LDFLAGS) -Map=$(BP_MAP) -o $@ $(BP_OBJ)
 
 $(PANIC_KERNEL): $(PANIC_OBJ) linker.ld
 >mkdir -p $(BUILD_DIR)
@@ -84,14 +136,21 @@ inspect: $(KERNEL)
 >grep -q 'kmain' $(SYMS)
 >grep -q 'kernel_panic_at' $(SYMS)
 >grep -q 'cpu_halt_forever' $(DISASM)
+>grep -q 'x86_64_idt_init' $(SYMS)
+>grep -q 'x86_64_trap_dispatch' $(SYMS)
+>grep -q 'iretq' $(DISASM)
+>grep -q 'lidt' $(DISASM)
 
 # ════════════════════════════════════════════════════════════════════════════
 # AUDIT
 # ════════════════════════════════════════════════════════════════════════════
-audit: inspect panic
+audit: inspect breakpoint panic
 >! $(NM) -u $(KERNEL) | grep .
+>! $(NM) -u $(BP_KERNEL) | grep .
 >! $(NM) -u $(PANIC_KERNEL) | grep .
 >grep -q 'kernel_panic_at' $(DISASM)
+>grep -q 'isr_stub_14' $(SYMS)
+>grep -q 'x86_64_exception_stubs' $(SYMS)
 >$(READELF) -S $(KERNEL) | grep -q '.text'
 >$(READELF) -S $(KERNEL) | grep -q '.rodata'
 
@@ -99,36 +158,47 @@ audit: inspect panic
 # IMAGE — helper internal untuk isi iso_root
 # ════════════════════════════════════════════════════════════════════════════
 define build_iso
-	@test -f $(LIMINE_DIR)/limine-bios.sys || \
-	    { echo "ERROR: jalankan: make -C limine"; exit 1; }
-	rm -rf $(ISO_ROOT)
-	mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
-	cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
-	cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
-	cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
-	cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
-	cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
-	cp limine.conf                        $(ISO_ROOT)/boot/limine/limine.conf
-	cp limine.conf                        $(ISO_ROOT)/EFI/BOOT/limine.conf
-	xorriso -as mkisofs \
-	    -b boot/limine/limine-bios-cd.bin \
-	    -no-emul-boot -boot-load-size 4 -boot-info-table \
-	    --efi-boot boot/limine/limine-uefi-cd.bin \
-	    -efi-boot-part --efi-boot-image --protective-msdos-label \
-	    $(ISO_ROOT) -o $(2) 2>/dev/null
-	$(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
-	@echo "ISO selesai: $(2)"
+        @test -f $(LIMINE_DIR)/limine-bios.sys || \
+            { echo "ERROR: jalankan: make -C limine"; exit 1; }
+        rm -rf $(ISO_ROOT)
+        mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
+        cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
+        cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
+        cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
+        cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
+        cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
+        cp limine.conf                       $(ISO_ROOT)/boot/limine/limine.conf
+        cp limine.conf                       $(ISO_ROOT)/EFI/BOOT/limine.conf
+        xorriso -as mkisofs \
+            -b boot/limine/limine-bios-cd.bin \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            --efi-boot boot/limine/limine-uefi-cd.bin \
+            -efi-boot-part --efi-boot-image --protective-msdos-label \
+            $(ISO_ROOT) -o $(2) 2>/dev/null
+        $(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
+        @echo "ISO selesai: $(2)"
 endef
 
 image: $(ISO)
+
+iso: image
 
 $(ISO): $(KERNEL) limine.conf
 >$(call build_iso,$(KERNEL),$(ISO))
 
 image-panic: $(PANIC_ISO)
 
+iso-panic: image-panic
+
 $(PANIC_ISO): $(PANIC_KERNEL) limine.conf
 >$(call build_iso,$(PANIC_KERNEL),$(PANIC_ISO))
+
+image-breakpoint: $(BP_ISO)
+
+iso-breakpoint: image-breakpoint
+
+$(BP_ISO): $(BP_KERNEL) limine.conf
+>$(call build_iso,$(BP_KERNEL),$(BP_ISO))
 
 # ════════════════════════════════════════════════════════════════════════════
 # CLEAN
@@ -137,7 +207,7 @@ clean:
 >rm -rf $(BUILD_DIR) $(ISO_ROOT)
 
 distclean: clean
->rm -rf limine ovmf
+>rm -rf limine ovmf evidence
 
 # ════════════════════════════════════════════════════════════════════════════
 # META
@@ -148,4 +218,4 @@ meta:
 >echo "ld.lld: $$(ld.lld --version | head -n 1)"           >> $(BUILD_DIR)/meta/toolchain-versions.txt
 >echo "qemu: $$(qemu-system-x86_64 --version | head -n 1)" >> $(BUILD_DIR)/meta/toolchain-versions.txt
 >echo "xorriso: $$(xorriso --version 2>&1 | head -n 1)"    >> $(BUILD_DIR)/meta/toolchain-versions.txt
->echo "make: $$(make --version | head -n 1)"                >> $(BUILD_DIR)/meta/toolchain-versions.txt
+>echo "make: $$(make --version | head -n 1)"               >> $(BUILD_DIR)/meta/toolchain-versions.txt
