@@ -1,9 +1,10 @@
 # M3 evidence manifest
-generated_utc=2026-05-20T04:35:20Z
-commit=ee3e62c00ba113e3f36fac4684eafa74dc7b042b
+generated_utc=2026-05-20T04:45:07Z
+commit=5ce64392cd606220832a73a0cdcbd0679cfb9115
 clang=Ubuntu clang version 14.0.0-1ubuntu1.1
 lld=Ubuntu LLD 14.0.0 (compatible with GNU linkers)
 qemu=QEMU emulator version 6.2.0 (Debian 1:6.2+dfsg-2ubuntu6.30)
+gdb_session.log
 kernel.disasm.txt
 kernel.elf
 kernel.map
