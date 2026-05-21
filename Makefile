@@ -256,3 +256,43 @@ grade: audit
 >grep -q 'x86_64_trap_dispatch' $(BUILD_DIR)/symbols.txt
 
 >@echo '[M5] static grade: PASS'
+
+# ════════════════════════════════════════════════════════════════════════════
+# M6 STATIC CHECK
+# ════════════════════════════════════════════════════════════════════════════
+
+HOSTCC := cc
+
+M6_HOST_CFLAGS := \
+    -std=c17 -Wall -Wextra -Werror \
+    -Ikernel/include
+
+.PHONY: check-m6
+
+check-m6:
+>mkdir -p build
+
+>$(CC) \
+    -std=c17 \
+    -Wall -Wextra -Werror \
+    -ffreestanding -fno-builtin \
+    -fno-stack-protector \
+    -mno-red-zone \
+    -Ikernel/include \
+    -c kernel/core/pmm.c \
+    -o build/pmm.o
+
+>$(HOSTCC) $(M6_HOST_CFLAGS) \
+    kernel/core/pmm.c \
+    tests/test_pmm_host.c \
+    -o build/test_pmm_host
+
+>./build/test_pmm_host
+
+>$(NM) -u build/pmm.o | tee build/pmm.undefined.txt
+
+>test ! -s build/pmm.undefined.txt
+
+>$(OBJDUMP) -dr build/pmm.o > build/pmm.objdump.txt
+
+>@echo '[M6] static grade: PASS'

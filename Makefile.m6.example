@@ -1,0 +1,22 @@
+CC ?= clang
+HOSTCC ?= cc
+CFLAGS := -std=c17 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -mno-red-zone -Iinclude
+HOST_CFLAGS := -std=c17 -Wall -Wextra -Werror -Iinclude
+
+all: build/pmm.o build/test_pmm_host
+
+build/pmm.o: src/pmm.c include/pmm.h include/types.h
+	mkdir -p build
+	$(CC) $(CFLAGS) -c src/pmm.c -o build/pmm.o
+
+build/test_pmm_host: src/pmm.c tests/test_pmm_host.c include/pmm.h include/types.h
+	mkdir -p build
+	$(HOSTCC) $(HOST_CFLAGS) src/pmm.c tests/test_pmm_host.c -o build/test_pmm_host
+
+check: all
+	./build/test_pmm_host
+	nm -u build/pmm.o
+	objdump -dr build/pmm.o > build/pmm.objdump.txt
+
+clean:
+	rm -rf build
