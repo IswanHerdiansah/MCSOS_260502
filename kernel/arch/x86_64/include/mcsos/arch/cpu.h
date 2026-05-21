@@ -7,6 +7,10 @@ static inline void cpu_cli(void) {
     __asm__ volatile ("cli" : : : "memory");
 }
 
+static inline void cpu_sti(void) {
+    __asm__ volatile ("sti" : : : "memory");
+}
+
 static inline void cpu_hlt(void) {
     __asm__ volatile ("hlt" : : : "memory");
 }
@@ -33,4 +37,3 @@ __attribute__((noreturn)) static inline void cpu_halt_forever(void) {
 }
 
 #endif
-

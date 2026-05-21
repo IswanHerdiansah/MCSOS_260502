@@ -219,3 +219,40 @@ meta:
 >echo "qemu: $$(qemu-system-x86_64 --version | head -n 1)" >> $(BUILD_DIR)/meta/toolchain-versions.txt
 >echo "xorriso: $$(xorriso --version 2>&1 | head -n 1)"    >> $(BUILD_DIR)/meta/toolchain-versions.txt
 >echo "make: $$(make --version | head -n 1)"               >> $(BUILD_DIR)/meta/toolchain-versions.txt
+
+# ════════════════════════════════════════════════════════════════════════════
+# M5 STATIC GRADE
+# ════════════════════════════════════════════════════════════════════════════
+
+GRADE_ELF := $(BUILD_DIR)/mcsos-m5.elf
+GRADE_MAP := $(BUILD_DIR)/mcsos-m5.map
+
+.PHONY: grade
+
+grade: audit
+>cp $(KERNEL) $(GRADE_ELF)
+>cp $(MAP) $(GRADE_MAP)
+
+>$(READELF) -h $(KERNEL) > $(BUILD_DIR)/readelf-header.txt
+>$(READELF) -S $(KERNEL) > $(BUILD_DIR)/readelf-sections.txt
+>$(READELF) -l $(KERNEL) > $(BUILD_DIR)/readelf-program-headers.txt
+
+>$(NM) -n $(KERNEL) > $(BUILD_DIR)/symbols.txt
+>$(NM) -u $(KERNEL) > $(BUILD_DIR)/undefined.txt
+
+>$(OBJDUMP) -d -Mintel $(KERNEL) > $(BUILD_DIR)/disassembly.txt
+
+>test ! -s $(BUILD_DIR)/undefined.txt
+
+>grep -q 'lidt' $(BUILD_DIR)/disassembly.txt
+>grep -q 'iretq' $(BUILD_DIR)/disassembly.txt
+>grep -q 'sti' $(BUILD_DIR)/disassembly.txt
+>grep -q 'hlt' $(BUILD_DIR)/disassembly.txt
+
+>grep -q 'isr_stub_32' $(BUILD_DIR)/symbols.txt
+>grep -q 'pic_remap' $(BUILD_DIR)/symbols.txt
+>grep -q 'pit_configure_hz' $(BUILD_DIR)/symbols.txt
+>grep -q 'timer_on_irq0' $(BUILD_DIR)/symbols.txt
+>grep -q 'x86_64_trap_dispatch' $(BUILD_DIR)/symbols.txt
+
+>@echo '[M5] static grade: PASS'

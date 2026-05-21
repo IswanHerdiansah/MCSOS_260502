@@ -8,6 +8,7 @@ void log_putc(char c);
 void log_write(const char *s);
 void log_writeln(const char *s);
 void log_hex64(uint64_t value);
+void log_dec64(uint64_t value);
 void log_key_value_hex64(const char *key, uint64_t value);
 
 #endif
