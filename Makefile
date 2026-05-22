@@ -158,25 +158,25 @@ audit: inspect breakpoint panic
 # IMAGE — helper internal untuk isi iso_root
 # ════════════════════════════════════════════════════════════════════════════
 define build_iso
-        @test -f $(LIMINE_DIR)/limine-bios.sys || \
-            { echo "ERROR: jalankan: make -C limine"; exit 1; }
-        rm -rf $(ISO_ROOT)
-        mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
-        cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
-        cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
-        cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
-        cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
-        cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
-        cp limine.conf                       $(ISO_ROOT)/boot/limine/limine.conf
-        cp limine.conf                       $(ISO_ROOT)/EFI/BOOT/limine.conf
-        xorriso -as mkisofs \
-            -b boot/limine/limine-bios-cd.bin \
-            -no-emul-boot -boot-load-size 4 -boot-info-table \
-            --efi-boot boot/limine/limine-uefi-cd.bin \
-            -efi-boot-part --efi-boot-image --protective-msdos-label \
-            $(ISO_ROOT) -o $(2) 2>/dev/null
-        $(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
-        @echo "ISO selesai: $(2)"
+	@test -f $(LIMINE_DIR)/limine-bios.sys || \
+	    { echo "ERROR: jalankan: make -C limine"; exit 1; }
+	rm -rf $(ISO_ROOT)
+	mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
+	cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
+	cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
+	cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
+	cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
+	cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
+	cp limine.conf                       $(ISO_ROOT)/boot/limine/limine.conf
+	cp limine.conf                       $(ISO_ROOT)/EFI/BOOT/limine.conf
+	xorriso -as mkisofs \
+	    -b boot/limine/limine-bios-cd.bin \
+	    -no-emul-boot -boot-load-size 4 -boot-info-table \
+	    --efi-boot boot/limine/limine-uefi-cd.bin \
+	    -efi-boot-part --efi-boot-image --protective-msdos-label \
+	    $(ISO_ROOT) -o $(2) 2>/dev/null
+	$(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
+	@echo "ISO selesai: $(2)"
 endef
 
 image: $(ISO)
@@ -296,3 +296,106 @@ check-m6:
 >$(OBJDUMP) -dr build/pmm.o > build/pmm.objdump.txt
 
 >@echo '[M6] static grade: PASS'
+
+# ════════════════════════════════════════════════════════════════════════════
+# M7 TARGETS
+# ════════════════════════════════════════════════════════════════════════════
+
+.PHONY: check-m7
+check-m7:
+>./scripts/check_m7_static.sh
+
+.PHONY: grade-m7
+grade-m7:
+>./scripts/grade_m7.sh
+
+.PHONY: run-qemu-gdb
+run-qemu-gdb: $(ISO)
+>qemu-system-x86_64 \
+    -cdrom $(ISO) \
+    -serial stdio \
+    -s -S
+
+.PHONY: run-qemu-smoke
+run-qemu-smoke: $(ISO)
+>qemu-system-x86_64 \
+    -cdrom $(ISO) \
+    -serial stdio \
+    -display none \
+    -no-reboot \
+    -no-shutdown
+
+# ════════════════════════════════════════════════════════════════════════════
+# M8 TARGETS
+# ════════════════════════════════════════════════════════════════════════════
+
+M8_BUILD_DIR := build/m8
+
+.PHONY: m8-clean
+m8-clean:
+>rm -rf $(M8_BUILD_DIR)
+
+$(M8_BUILD_DIR):
+>mkdir -p $(M8_BUILD_DIR)
+
+.PHONY: m8-kmem-freestanding
+m8-kmem-freestanding: | $(M8_BUILD_DIR)
+>$(CC) \
+    -std=c17 \
+    -Wall \
+    -Wextra \
+    -Werror \
+    -ffreestanding \
+    -fno-builtin \
+    -fno-stack-protector \
+    -mno-red-zone \
+    -Ikernel/include \
+    -c kernel/mm/kmem.c \
+    -o $(M8_BUILD_DIR)/kmem.freestanding.o
+
+.PHONY: m8-kmem-host-test
+m8-kmem-host-test: | $(M8_BUILD_DIR)
+>$(HOSTCC) \
+    -std=c17 \
+    -Wall \
+    -Wextra \
+    -Werror \
+    -Ikernel/include \
+    tests/test_kmem.c \
+    kernel/mm/kmem.c \
+    -o $(M8_BUILD_DIR)/test_kmem
+
+>./$(M8_BUILD_DIR)/test_kmem | tee $(M8_BUILD_DIR)/test_kmem.log
+
+.PHONY: m8-audit
+m8-audit: m8-kmem-freestanding
+>nm -u $(M8_BUILD_DIR)/kmem.freestanding.o | tee $(M8_BUILD_DIR)/nm_u.txt
+
+>test ! -s $(M8_BUILD_DIR)/nm_u.txt
+
+>readelf -h $(M8_BUILD_DIR)/kmem.freestanding.o > $(M8_BUILD_DIR)/readelf_h.txt
+
+>objdump -dr $(M8_BUILD_DIR)/kmem.freestanding.o > $(M8_BUILD_DIR)/kmem.objdump.txt
+
+.PHONY: check-m8
+check-m8:
+>./scripts/check_m8_kmem.sh
+
+.PHONY: m8-all
+m8-all: m8-kmem-host-test m8-audit
+
+.PHONY: run
+
+run: $(ISO)
+>mkdir -p build/m8
+>qemu-system-x86_64 \
+>	-machine q35 \
+>	-cpu max \
+>	-m 256M \
+>	-serial stdio \
+>	-no-reboot \
+>	-no-shutdown \
+>	-d int,cpu_reset,guest_errors \
+>	-D build/m8/qemu_debug.log \
+>	-cdrom $(ISO) \
+>2>&1 | tee build/m8/qemu_m8.log
