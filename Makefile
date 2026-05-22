@@ -158,25 +158,25 @@ audit: inspect breakpoint panic
 # IMAGE — helper internal untuk isi iso_root
 # ════════════════════════════════════════════════════════════════════════════
 define build_iso
-	@test -f $(LIMINE_DIR)/limine-bios.sys || \
-	    { echo "ERROR: jalankan: make -C limine"; exit 1; }
-	rm -rf $(ISO_ROOT)
-	mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
-	cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
-	cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
-	cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
-	cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
-	cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
-	cp limine.conf                       $(ISO_ROOT)/boot/limine/limine.conf
-	cp limine.conf                       $(ISO_ROOT)/EFI/BOOT/limine.conf
-	xorriso -as mkisofs \
-	    -b boot/limine/limine-bios-cd.bin \
-	    -no-emul-boot -boot-load-size 4 -boot-info-table \
-	    --efi-boot boot/limine/limine-uefi-cd.bin \
-	    -efi-boot-part --efi-boot-image --protective-msdos-label \
-	    $(ISO_ROOT) -o $(2) 2>/dev/null
-	$(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
-	@echo "ISO selesai: $(2)"
+        @test -f $(LIMINE_DIR)/limine-bios.sys || \
+            { echo "ERROR: jalankan: make -C limine"; exit 1; }
+        rm -rf $(ISO_ROOT)
+        mkdir -p $(ISO_ROOT)/boot/limine $(ISO_ROOT)/EFI/BOOT
+        cp $(1)                              $(ISO_ROOT)/boot/kernel.elf
+        cp $(LIMINE_DIR)/limine-bios.sys     $(ISO_ROOT)/boot/limine/
+        cp $(LIMINE_DIR)/limine-bios-cd.bin  $(ISO_ROOT)/boot/limine/
+        cp $(LIMINE_DIR)/limine-uefi-cd.bin  $(ISO_ROOT)/boot/limine/
+        cp $(LIMINE_DIR)/BOOTX64.EFI         $(ISO_ROOT)/EFI/BOOT/BOOTX64.EFI
+        cp limine.conf                       $(ISO_ROOT)/boot/limine/limine.conf
+        cp limine.conf                       $(ISO_ROOT)/EFI/BOOT/limine.conf
+        xorriso -as mkisofs \
+            -b boot/limine/limine-bios-cd.bin \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            --efi-boot boot/limine/limine-uefi-cd.bin \
+            -efi-boot-part --efi-boot-image --protective-msdos-label \
+            $(ISO_ROOT) -o $(2) 2>/dev/null
+        $(LIMINE_DIR)/limine bios-install $(2) 2>/dev/null
+        @echo "ISO selesai: $(2)"
 endef
 
 image: $(ISO)
@@ -384,23 +384,6 @@ check-m8:
 .PHONY: m8-all
 m8-all: m8-kmem-host-test m8-audit
 
-.PHONY: run
-
-run: $(ISO)
->mkdir -p build/m8
->qemu-system-x86_64 \
->	-machine q35 \
->	-cpu max \
->	-m 256M \
->	-serial stdio \
->	-no-reboot \
->	-no-shutdown \
->	-d int,cpu_reset,guest_errors \
->	-D build/m8/qemu_debug.log \
->	-cdrom $(ISO) \
->2>&1 | tee build/m8/qemu_m8.log
-
-
 # ============================================================================
 # M9 TARGETS
 # ============================================================================
@@ -482,6 +465,7 @@ m9-freestanding: | $(M9_BUILD_DIR)
 
 .PHONY: m9-audit
 m9-audit: m9-freestanding
+
 >nm -u build/m9/m9_scheduler_combined.o \
 >   | tee build/m9/nm_undefined.log
 
@@ -491,35 +475,19 @@ m9-audit: m9-freestanding
 >   | tee build/m9/readelf_header.log
 
 >grep -q 'ELF64' build/m9/readelf_header.log
+>grep -q 'Advanced Micro Devices X86-64' build/m9/readelf_header.log
 
->grep -q 'Advanced Micro Devices X86-64' \
->   build/m9/readelf_header.log
-
->objdump -t build/m9/m9_scheduler_combined.o \
+>objdump -d build/m9/m9_scheduler_combined.o \
+>   | grep -E 'mcsos_context_switch|jmp|ret|hlt' \
 >   | tee build/m9/objdump_key.log
 
->grep -q 'mcsos_context_switch' \
->   build/m9/objdump_key.log
+>grep -q 'mcsos_context_switch' build/m9/objdump_key.log
+>grep -q 'hlt' build/m9/objdump_key.log
 
 >sha256sum \
 >   build/m9/m9_host_test \
 >   build/m9/m9_scheduler_combined.o \
 >   | tee build/m9/sha256.log
-
->cp build/m9/test_scheduler.log \
->   evidence/m9/test_scheduler.log
-
->cp build/m9/nm_undefined.log \
->   evidence/m9/nm_undefined.log
-
->cp build/m9/readelf_header.log \
->   evidence/m9/readelf_header.log
-
->cp build/m9/objdump_key.log \
->   evidence/m9/objdump_key.log
-
->cp build/m9/sha256.log \
->   evidence/m9/sha256.log
 
 >@echo "[M9] audit PASS"
 
@@ -528,4 +496,106 @@ m9-all: m9-host-test m9-audit
 
 >@echo "======================================"
 >@echo "[M9] scheduler milestone PASS"
+>@echo "======================================"
+
+# ============================================================================
+# M10 TARGETS
+# ============================================================================
+
+M10_BUILD_DIR := build/m10
+
+.PHONY: m10-clean
+m10-clean:
+>rm -rf build/m10
+>rm -rf logs/m10
+
+build/m10:
+>mkdir -p build/m10
+
+logs/m10:
+>mkdir -p logs/m10
+
+.PHONY: m10-host-test
+m10-host-test: build/m10
+>cc \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -DMCSOS_HOST_TEST \
+>   -Ikernel/include \
+>   tests/test_syscall.c \
+>   kernel/core/syscall.c \
+>   -o build/m10/m10_host_test
+
+>./build/m10/m10_host_test \
+>   | tee build/m10/test_syscall.log
+
+>@echo "[M10] host test PASS"
+
+.PHONY: m10-freestanding
+m10-freestanding: build/m10
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -fno-pie \
+>   -m64 \
+>   -mno-red-zone \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -Ikernel/include \
+>   -c kernel/core/syscall.c \
+>   -o build/m10/syscall.o
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -ffreestanding \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -fno-pie \
+>   -m64 \
+>   -mno-red-zone \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -Ikernel/include \
+>   -c kernel/arch/x86_64/syscall_entry.S \
+>   -o build/m10/syscall_entry.o
+
+>ld.lld -r \
+>   build/m10/syscall.o \
+>   build/m10/syscall_entry.o \
+>   -o build/m10/m10_syscall_combined.o
+
+>@echo "[M10] freestanding PASS"
+
+.PHONY: m10-audit
+m10-audit: build/m10
+>nm -u build/m10/m10_syscall_combined.o \
+>   | tee build/m10/nm_undefined.log
+
+>readelf -h build/m10/m10_syscall_combined.o \
+>   | tee build/m10/readelf_header.log
+
+>objdump -d build/m10/m10_syscall_combined.o \
+>   | grep -E 'x86_64_syscall_int80_stub|iretq' \
+>   | tee build/m10/objdump_key.log
+
+>sha256sum \
+>   build/m10/m10_host_test \
+>   build/m10/m10_syscall_combined.o \
+>   | tee build/m10/sha256.log
+
+>@echo "[M10] audit PASS"
+
+.PHONY: m10-all
+m10-all: m10-host-test m10-freestanding m10-audit
+>bash scripts/m10_preflight.sh
+>@echo "======================================"
+>@echo "[M10] syscall milestone PASS"
 >@echo "======================================"
