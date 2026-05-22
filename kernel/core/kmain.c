@@ -12,6 +12,7 @@
 #include <mcsos/kernel/pmm.h>
 #include <mcsos/kernel/vmm.h>
 #include <mcsos/kernel/kmem.h>
+#include <mcsos/kernel/thread.h>
 
 extern char __kernel_start[];
 extern char __kernel_end[];
@@ -65,6 +66,68 @@ static void m8_heap_bootstrap(void) {
     log_writeln("[M8] kmem initialized");
 }
 
+static void thread_a(void) {
+
+    for (;;) {
+
+        log_writeln("[M9] thread A running");
+
+        void *p = kmalloc(64);
+
+        KERNEL_ASSERT(p != 0);
+
+        for (volatile uint64_t i = 0;
+             i < 5000000ULL;
+             ++i) {
+        }
+
+        kfree(p);
+
+        thread_yield();
+    }
+}
+
+static void thread_b(void) {
+
+    for (;;) {
+
+        log_writeln("[M9] thread B running");
+
+        void *p = kmalloc(128);
+
+        KERNEL_ASSERT(p != 0);
+
+        for (volatile uint64_t i = 0;
+             i < 5000000ULL;
+             ++i) {
+        }
+
+        kfree(p);
+
+        thread_yield();
+    }
+}
+
+static void thread_c(void) {
+
+    for (;;) {
+
+        log_writeln("[M9] thread C running");
+
+        thread_yield();
+    }
+}
+
+static void thread_d(void) {
+
+    for (;;) {
+
+        log_writeln("[M9] thread D running");
+
+        thread_yield();
+    }
+}
+
 void kmain(void) {
 
     cpu_cli();
@@ -76,7 +139,7 @@ void kmain(void) {
     log_write(MCSOS_VERSION);
     log_write(" ");
     log_write(MCSOS_MILESTONE);
-    log_writeln(" [M8] kernel heap allocator");
+    log_writeln(" [M9] cooperative scheduler stress test");
 
     log_key_value_hex64(
         "kernel_start",
@@ -141,6 +204,30 @@ void kmain(void) {
 
     m8_heap_bootstrap();
 
+    thread_system_init();
+
+    struct thread *ta =
+        thread_create(thread_a);
+
+    KERNEL_ASSERT(ta != 0);
+
+    struct thread *tb =
+        thread_create(thread_b);
+
+    KERNEL_ASSERT(tb != 0);
+
+    struct thread *tc =
+        thread_create(thread_c);
+
+    KERNEL_ASSERT(tc != 0);
+
+    struct thread *td =
+        thread_create(thread_d);
+
+    KERNEL_ASSERT(td != 0);
+
+    log_writeln("[M9] scheduler initialized");
+
     x86_64_idt_init();
 
     log_writeln("[M5] idt: loaded");
@@ -161,6 +248,8 @@ void kmain(void) {
     log_writeln("[M5] sti: enabling interrupts");
 
     cpu_sti();
+
+    thread_yield();
 
     for (;;) {
         cpu_hlt();

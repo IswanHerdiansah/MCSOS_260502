@@ -399,3 +399,133 @@ run: $(ISO)
 >	-D build/m8/qemu_debug.log \
 >	-cdrom $(ISO) \
 >2>&1 | tee build/m8/qemu_m8.log
+
+
+# ============================================================================
+# M9 TARGETS
+# ============================================================================
+
+M9_BUILD_DIR := build/m9
+M9_EVIDENCE_DIR := evidence/m9
+
+.PHONY: m9-clean
+m9-clean:
+>rm -rf $(M9_BUILD_DIR)
+>rm -rf $(M9_EVIDENCE_DIR)
+
+$(M9_BUILD_DIR):
+>mkdir -p $(M9_BUILD_DIR)
+
+$(M9_EVIDENCE_DIR):
+>mkdir -p $(M9_EVIDENCE_DIR)
+
+.PHONY: m9-host-test
+m9-host-test: | $(M9_BUILD_DIR) $(M9_EVIDENCE_DIR)
+
+>$(HOSTCC) \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -DMCSOS_HOST_TEST \
+>   -Ikernel/include \
+>   tests/test_scheduler.c \
+>   kernel/core/thread.c \
+>   kernel/mm/kmem.c \
+>   -o build/m9/m9_host_test
+
+>./build/m9/m9_host_test \
+>   | tee build/m9/test_scheduler.log
+
+.PHONY: m9-freestanding
+m9-freestanding: | $(M9_BUILD_DIR)
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -fno-pie \
+>   -m64 \
+>   -mno-red-zone \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -DMCSOS_HOST_TEST \
+>   -Ikernel/include \
+>   -c kernel/core/thread.c \
+>   -o build/m9/mcsos_thread.freestanding.o
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -ffreestanding \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -fno-pie \
+>   -m64 \
+>   -mno-red-zone \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -Ikernel/include \
+>   -c kernel/arch/x86_64/context_switch.S \
+>   -o build/m9/context_switch.o
+
+>ld.lld -r \
+>   build/m9/mcsos_thread.freestanding.o \
+>   build/m9/context_switch.o \
+>   -o build/m9/m9_scheduler_combined.o
+
+>@echo "[M9] freestanding PASS"
+
+.PHONY: m9-audit
+m9-audit: m9-freestanding
+>nm -u build/m9/m9_scheduler_combined.o \
+>   | tee build/m9/nm_undefined.log
+
+>test ! -s build/m9/nm_undefined.log
+
+>readelf -h build/m9/m9_scheduler_combined.o \
+>   | tee build/m9/readelf_header.log
+
+>grep -q 'ELF64' build/m9/readelf_header.log
+
+>grep -q 'Advanced Micro Devices X86-64' \
+>   build/m9/readelf_header.log
+
+>objdump -t build/m9/m9_scheduler_combined.o \
+>   | tee build/m9/objdump_key.log
+
+>grep -q 'mcsos_context_switch' \
+>   build/m9/objdump_key.log
+
+>sha256sum \
+>   build/m9/m9_host_test \
+>   build/m9/m9_scheduler_combined.o \
+>   | tee build/m9/sha256.log
+
+>cp build/m9/test_scheduler.log \
+>   evidence/m9/test_scheduler.log
+
+>cp build/m9/nm_undefined.log \
+>   evidence/m9/nm_undefined.log
+
+>cp build/m9/readelf_header.log \
+>   evidence/m9/readelf_header.log
+
+>cp build/m9/objdump_key.log \
+>   evidence/m9/objdump_key.log
+
+>cp build/m9/sha256.log \
+>   evidence/m9/sha256.log
+
+>@echo "[M9] audit PASS"
+
+.PHONY: m9-all
+m9-all: m9-host-test m9-audit
+
+>@echo "======================================"
+>@echo "[M9] scheduler milestone PASS"
+>@echo "======================================"
