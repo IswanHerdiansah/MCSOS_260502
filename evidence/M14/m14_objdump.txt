@@ -1,0 +1,265 @@
+
+build/m14/m14_block_combined.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <mcs_ram_block_init>:
+   0:	55                   	push   %rbp
+   1:	48 89 e5             	mov    %rsp,%rbp
+   4:	48 89 37             	mov    %rsi,(%rdi)
+   7:	48 89 57 08          	mov    %rdx,0x8(%rdi)
+   b:	5d                   	pop    %rbp
+   c:	c3                   	ret    
+   d:	0f 1f 00             	nopl   (%rax)
+
+0000000000000010 <mcs_block_bind_ramdev>:
+  10:	55                   	push   %rbp
+  11:	48 89 e5             	mov    %rsp,%rbp
+  14:	48 8b 46 08          	mov    0x8(%rsi),%rax
+  18:	48 89 07             	mov    %rax,(%rdi)
+  1b:	48 c7 47 08 00 00 00 	movq   $0x0,0x8(%rdi)
+  22:	00 
+			1f: R_X86_64_32S	.text+0x40
+  23:	48 c7 47 10 00 00 00 	movq   $0x0,0x10(%rdi)
+  2a:	00 
+			27: R_X86_64_32S	.text+0x260
+  2b:	48 89 77 18          	mov    %rsi,0x18(%rdi)
+  2f:	5d                   	pop    %rbp
+  30:	c3                   	ret    
+  31:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  38:	00 00 00 
+  3b:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+
+0000000000000040 <m14_ramblk_read>:
+  40:	55                   	push   %rbp
+  41:	48 89 e5             	mov    %rsp,%rbp
+  44:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+  49:	48 85 ff             	test   %rdi,%rdi
+  4c:	74 71                	je     bf <m14_ramblk_read+0x7f>
+  4e:	48 85 d2             	test   %rdx,%rdx
+  51:	74 6c                	je     bf <m14_ramblk_read+0x7f>
+  53:	48 8b 4f 18          	mov    0x18(%rdi),%rcx
+  57:	48 39 71 08          	cmp    %rsi,0x8(%rcx)
+  5b:	76 62                	jbe    bf <m14_ramblk_read+0x7f>
+  5d:	48 8b 09             	mov    (%rcx),%rcx
+  60:	48 c1 e6 09          	shl    $0x9,%rsi
+  64:	48 8d 04 31          	lea    (%rcx,%rsi,1),%rax
+  68:	48 8d 3c 31          	lea    (%rcx,%rsi,1),%rdi
+  6c:	48 81 c7 00 02 00 00 	add    $0x200,%rdi
+  73:	48 39 d7             	cmp    %rdx,%rdi
+  76:	76 49                	jbe    c1 <m14_ramblk_read+0x81>
+  78:	48 8d ba 00 02 00 00 	lea    0x200(%rdx),%rdi
+  7f:	48 39 f8             	cmp    %rdi,%rax
+  82:	73 3d                	jae    c1 <m14_ramblk_read+0x81>
+  84:	48 8d 3c 0e          	lea    (%rsi,%rcx,1),%rdi
+  88:	48 83 c7 03          	add    $0x3,%rdi
+  8c:	31 c0                	xor    %eax,%eax
+  8e:	31 f6                	xor    %esi,%esi
+  90:	0f b6 4c 37 fd       	movzbl -0x3(%rdi,%rsi,1),%ecx
+  95:	88 0c 32             	mov    %cl,(%rdx,%rsi,1)
+  98:	0f b6 4c 37 fe       	movzbl -0x2(%rdi,%rsi,1),%ecx
+  9d:	88 4c 32 01          	mov    %cl,0x1(%rdx,%rsi,1)
+  a1:	0f b6 4c 37 ff       	movzbl -0x1(%rdi,%rsi,1),%ecx
+  a6:	88 4c 32 02          	mov    %cl,0x2(%rdx,%rsi,1)
+  aa:	0f b6 0c 37          	movzbl (%rdi,%rsi,1),%ecx
+  ae:	88 4c 32 03          	mov    %cl,0x3(%rdx,%rsi,1)
+  b2:	48 83 c6 04          	add    $0x4,%rsi
+  b6:	48 81 fe 00 02 00 00 	cmp    $0x200,%rsi
+  bd:	75 d1                	jne    90 <m14_ramblk_read+0x50>
+  bf:	5d                   	pop    %rbp
+  c0:	c3                   	ret    
+  c1:	0f 10 00             	movups (%rax),%xmm0
+  c4:	0f 10 48 10          	movups 0x10(%rax),%xmm1
+  c8:	0f 11 02             	movups %xmm0,(%rdx)
+  cb:	0f 11 4a 10          	movups %xmm1,0x10(%rdx)
+  cf:	0f 10 40 20          	movups 0x20(%rax),%xmm0
+  d3:	0f 10 48 30          	movups 0x30(%rax),%xmm1
+  d7:	0f 11 42 20          	movups %xmm0,0x20(%rdx)
+  db:	0f 11 4a 30          	movups %xmm1,0x30(%rdx)
+  df:	0f 10 40 40          	movups 0x40(%rax),%xmm0
+  e3:	0f 10 48 50          	movups 0x50(%rax),%xmm1
+  e7:	0f 11 42 40          	movups %xmm0,0x40(%rdx)
+  eb:	0f 11 4a 50          	movups %xmm1,0x50(%rdx)
+  ef:	0f 10 40 60          	movups 0x60(%rax),%xmm0
+  f3:	0f 10 48 70          	movups 0x70(%rax),%xmm1
+  f7:	0f 11 42 60          	movups %xmm0,0x60(%rdx)
+  fb:	0f 11 4a 70          	movups %xmm1,0x70(%rdx)
+  ff:	0f 10 80 80 00 00 00 	movups 0x80(%rax),%xmm0
+ 106:	0f 10 88 90 00 00 00 	movups 0x90(%rax),%xmm1
+ 10d:	0f 11 82 80 00 00 00 	movups %xmm0,0x80(%rdx)
+ 114:	0f 11 8a 90 00 00 00 	movups %xmm1,0x90(%rdx)
+ 11b:	0f 10 80 a0 00 00 00 	movups 0xa0(%rax),%xmm0
+ 122:	0f 10 88 b0 00 00 00 	movups 0xb0(%rax),%xmm1
+ 129:	0f 11 82 a0 00 00 00 	movups %xmm0,0xa0(%rdx)
+ 130:	0f 11 8a b0 00 00 00 	movups %xmm1,0xb0(%rdx)
+ 137:	0f 10 80 c0 00 00 00 	movups 0xc0(%rax),%xmm0
+ 13e:	0f 10 88 d0 00 00 00 	movups 0xd0(%rax),%xmm1
+ 145:	0f 11 82 c0 00 00 00 	movups %xmm0,0xc0(%rdx)
+ 14c:	0f 11 8a d0 00 00 00 	movups %xmm1,0xd0(%rdx)
+ 153:	0f 10 80 e0 00 00 00 	movups 0xe0(%rax),%xmm0
+ 15a:	0f 10 88 f0 00 00 00 	movups 0xf0(%rax),%xmm1
+ 161:	0f 11 82 e0 00 00 00 	movups %xmm0,0xe0(%rdx)
+ 168:	0f 11 8a f0 00 00 00 	movups %xmm1,0xf0(%rdx)
+ 16f:	0f 10 80 00 01 00 00 	movups 0x100(%rax),%xmm0
+ 176:	0f 10 88 10 01 00 00 	movups 0x110(%rax),%xmm1
+ 17d:	0f 11 82 00 01 00 00 	movups %xmm0,0x100(%rdx)
+ 184:	0f 11 8a 10 01 00 00 	movups %xmm1,0x110(%rdx)
+ 18b:	0f 10 80 20 01 00 00 	movups 0x120(%rax),%xmm0
+ 192:	0f 10 88 30 01 00 00 	movups 0x130(%rax),%xmm1
+ 199:	0f 11 82 20 01 00 00 	movups %xmm0,0x120(%rdx)
+ 1a0:	0f 11 8a 30 01 00 00 	movups %xmm1,0x130(%rdx)
+ 1a7:	0f 10 80 40 01 00 00 	movups 0x140(%rax),%xmm0
+ 1ae:	0f 10 88 50 01 00 00 	movups 0x150(%rax),%xmm1
+ 1b5:	0f 11 82 40 01 00 00 	movups %xmm0,0x140(%rdx)
+ 1bc:	0f 11 8a 50 01 00 00 	movups %xmm1,0x150(%rdx)
+ 1c3:	0f 10 80 60 01 00 00 	movups 0x160(%rax),%xmm0
+ 1ca:	0f 10 88 70 01 00 00 	movups 0x170(%rax),%xmm1
+ 1d1:	0f 11 82 60 01 00 00 	movups %xmm0,0x160(%rdx)
+ 1d8:	0f 11 8a 70 01 00 00 	movups %xmm1,0x170(%rdx)
+ 1df:	0f 10 80 80 01 00 00 	movups 0x180(%rax),%xmm0
+ 1e6:	0f 10 88 90 01 00 00 	movups 0x190(%rax),%xmm1
+ 1ed:	0f 11 82 80 01 00 00 	movups %xmm0,0x180(%rdx)
+ 1f4:	0f 11 8a 90 01 00 00 	movups %xmm1,0x190(%rdx)
+ 1fb:	0f 10 80 a0 01 00 00 	movups 0x1a0(%rax),%xmm0
+ 202:	0f 10 88 b0 01 00 00 	movups 0x1b0(%rax),%xmm1
+ 209:	0f 11 82 a0 01 00 00 	movups %xmm0,0x1a0(%rdx)
+ 210:	0f 11 8a b0 01 00 00 	movups %xmm1,0x1b0(%rdx)
+ 217:	0f 10 80 c0 01 00 00 	movups 0x1c0(%rax),%xmm0
+ 21e:	0f 10 88 d0 01 00 00 	movups 0x1d0(%rax),%xmm1
+ 225:	0f 11 82 c0 01 00 00 	movups %xmm0,0x1c0(%rdx)
+ 22c:	0f 11 8a d0 01 00 00 	movups %xmm1,0x1d0(%rdx)
+ 233:	0f 10 80 e0 01 00 00 	movups 0x1e0(%rax),%xmm0
+ 23a:	0f 10 88 f0 01 00 00 	movups 0x1f0(%rax),%xmm1
+ 241:	0f 11 82 e0 01 00 00 	movups %xmm0,0x1e0(%rdx)
+ 248:	0f 11 8a f0 01 00 00 	movups %xmm1,0x1f0(%rdx)
+ 24f:	31 c0                	xor    %eax,%eax
+ 251:	5d                   	pop    %rbp
+ 252:	c3                   	ret    
+ 253:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+ 25a:	00 00 00 
+ 25d:	0f 1f 00             	nopl   (%rax)
+
+0000000000000260 <m14_ramblk_write>:
+ 260:	55                   	push   %rbp
+ 261:	48 89 e5             	mov    %rsp,%rbp
+ 264:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+ 269:	48 85 ff             	test   %rdi,%rdi
+ 26c:	74 71                	je     2df <m14_ramblk_write+0x7f>
+ 26e:	48 85 d2             	test   %rdx,%rdx
+ 271:	74 6c                	je     2df <m14_ramblk_write+0x7f>
+ 273:	48 8b 4f 18          	mov    0x18(%rdi),%rcx
+ 277:	48 39 71 08          	cmp    %rsi,0x8(%rcx)
+ 27b:	76 62                	jbe    2df <m14_ramblk_write+0x7f>
+ 27d:	48 8b 09             	mov    (%rcx),%rcx
+ 280:	48 c1 e6 09          	shl    $0x9,%rsi
+ 284:	48 8d 04 31          	lea    (%rcx,%rsi,1),%rax
+ 288:	48 8d ba 00 02 00 00 	lea    0x200(%rdx),%rdi
+ 28f:	48 39 f8             	cmp    %rdi,%rax
+ 292:	73 4d                	jae    2e1 <m14_ramblk_write+0x81>
+ 294:	48 8d 3c 31          	lea    (%rcx,%rsi,1),%rdi
+ 298:	48 81 c7 00 02 00 00 	add    $0x200,%rdi
+ 29f:	48 39 d7             	cmp    %rdx,%rdi
+ 2a2:	76 3d                	jbe    2e1 <m14_ramblk_write+0x81>
+ 2a4:	48 8d 3c 0e          	lea    (%rsi,%rcx,1),%rdi
+ 2a8:	48 83 c7 03          	add    $0x3,%rdi
+ 2ac:	31 c0                	xor    %eax,%eax
+ 2ae:	31 f6                	xor    %esi,%esi
+ 2b0:	0f b6 0c 32          	movzbl (%rdx,%rsi,1),%ecx
+ 2b4:	88 4c 37 fd          	mov    %cl,-0x3(%rdi,%rsi,1)
+ 2b8:	0f b6 4c 32 01       	movzbl 0x1(%rdx,%rsi,1),%ecx
+ 2bd:	88 4c 37 fe          	mov    %cl,-0x2(%rdi,%rsi,1)
+ 2c1:	0f b6 4c 32 02       	movzbl 0x2(%rdx,%rsi,1),%ecx
+ 2c6:	88 4c 37 ff          	mov    %cl,-0x1(%rdi,%rsi,1)
+ 2ca:	0f b6 4c 32 03       	movzbl 0x3(%rdx,%rsi,1),%ecx
+ 2cf:	88 0c 37             	mov    %cl,(%rdi,%rsi,1)
+ 2d2:	48 83 c6 04          	add    $0x4,%rsi
+ 2d6:	48 81 fe 00 02 00 00 	cmp    $0x200,%rsi
+ 2dd:	75 d1                	jne    2b0 <m14_ramblk_write+0x50>
+ 2df:	5d                   	pop    %rbp
+ 2e0:	c3                   	ret    
+ 2e1:	0f 10 02             	movups (%rdx),%xmm0
+ 2e4:	0f 10 4a 10          	movups 0x10(%rdx),%xmm1
+ 2e8:	0f 11 00             	movups %xmm0,(%rax)
+ 2eb:	0f 11 48 10          	movups %xmm1,0x10(%rax)
+ 2ef:	0f 10 42 20          	movups 0x20(%rdx),%xmm0
+ 2f3:	0f 10 4a 30          	movups 0x30(%rdx),%xmm1
+ 2f7:	0f 11 40 20          	movups %xmm0,0x20(%rax)
+ 2fb:	0f 11 48 30          	movups %xmm1,0x30(%rax)
+ 2ff:	0f 10 42 40          	movups 0x40(%rdx),%xmm0
+ 303:	0f 10 4a 50          	movups 0x50(%rdx),%xmm1
+ 307:	0f 11 40 40          	movups %xmm0,0x40(%rax)
+ 30b:	0f 11 48 50          	movups %xmm1,0x50(%rax)
+ 30f:	0f 10 42 60          	movups 0x60(%rdx),%xmm0
+ 313:	0f 10 4a 70          	movups 0x70(%rdx),%xmm1
+ 317:	0f 11 40 60          	movups %xmm0,0x60(%rax)
+ 31b:	0f 11 48 70          	movups %xmm1,0x70(%rax)
+ 31f:	0f 10 82 80 00 00 00 	movups 0x80(%rdx),%xmm0
+ 326:	0f 10 8a 90 00 00 00 	movups 0x90(%rdx),%xmm1
+ 32d:	0f 11 80 80 00 00 00 	movups %xmm0,0x80(%rax)
+ 334:	0f 11 88 90 00 00 00 	movups %xmm1,0x90(%rax)
+ 33b:	0f 10 82 a0 00 00 00 	movups 0xa0(%rdx),%xmm0
+ 342:	0f 10 8a b0 00 00 00 	movups 0xb0(%rdx),%xmm1
+ 349:	0f 11 80 a0 00 00 00 	movups %xmm0,0xa0(%rax)
+ 350:	0f 11 88 b0 00 00 00 	movups %xmm1,0xb0(%rax)
+ 357:	0f 10 82 c0 00 00 00 	movups 0xc0(%rdx),%xmm0
+ 35e:	0f 10 8a d0 00 00 00 	movups 0xd0(%rdx),%xmm1
+ 365:	0f 11 80 c0 00 00 00 	movups %xmm0,0xc0(%rax)
+ 36c:	0f 11 88 d0 00 00 00 	movups %xmm1,0xd0(%rax)
+ 373:	0f 10 82 e0 00 00 00 	movups 0xe0(%rdx),%xmm0
+ 37a:	0f 10 8a f0 00 00 00 	movups 0xf0(%rdx),%xmm1
+ 381:	0f 11 80 e0 00 00 00 	movups %xmm0,0xe0(%rax)
+ 388:	0f 11 88 f0 00 00 00 	movups %xmm1,0xf0(%rax)
+ 38f:	0f 10 82 00 01 00 00 	movups 0x100(%rdx),%xmm0
+ 396:	0f 10 8a 10 01 00 00 	movups 0x110(%rdx),%xmm1
+ 39d:	0f 11 80 00 01 00 00 	movups %xmm0,0x100(%rax)
+ 3a4:	0f 11 88 10 01 00 00 	movups %xmm1,0x110(%rax)
+ 3ab:	0f 10 82 20 01 00 00 	movups 0x120(%rdx),%xmm0
+ 3b2:	0f 10 8a 30 01 00 00 	movups 0x130(%rdx),%xmm1
+ 3b9:	0f 11 80 20 01 00 00 	movups %xmm0,0x120(%rax)
+ 3c0:	0f 11 88 30 01 00 00 	movups %xmm1,0x130(%rax)
+ 3c7:	0f 10 82 40 01 00 00 	movups 0x140(%rdx),%xmm0
+ 3ce:	0f 10 8a 50 01 00 00 	movups 0x150(%rdx),%xmm1
+ 3d5:	0f 11 80 40 01 00 00 	movups %xmm0,0x140(%rax)
+ 3dc:	0f 11 88 50 01 00 00 	movups %xmm1,0x150(%rax)
+ 3e3:	0f 10 82 60 01 00 00 	movups 0x160(%rdx),%xmm0
+ 3ea:	0f 10 8a 70 01 00 00 	movups 0x170(%rdx),%xmm1
+ 3f1:	0f 11 80 60 01 00 00 	movups %xmm0,0x160(%rax)
+ 3f8:	0f 11 88 70 01 00 00 	movups %xmm1,0x170(%rax)
+ 3ff:	0f 10 82 80 01 00 00 	movups 0x180(%rdx),%xmm0
+ 406:	0f 10 8a 90 01 00 00 	movups 0x190(%rdx),%xmm1
+ 40d:	0f 11 80 80 01 00 00 	movups %xmm0,0x180(%rax)
+ 414:	0f 11 88 90 01 00 00 	movups %xmm1,0x190(%rax)
+ 41b:	0f 10 82 a0 01 00 00 	movups 0x1a0(%rdx),%xmm0
+ 422:	0f 10 8a b0 01 00 00 	movups 0x1b0(%rdx),%xmm1
+ 429:	0f 11 80 a0 01 00 00 	movups %xmm0,0x1a0(%rax)
+ 430:	0f 11 88 b0 01 00 00 	movups %xmm1,0x1b0(%rax)
+ 437:	0f 10 82 c0 01 00 00 	movups 0x1c0(%rdx),%xmm0
+ 43e:	0f 10 8a d0 01 00 00 	movups 0x1d0(%rdx),%xmm1
+ 445:	0f 11 80 c0 01 00 00 	movups %xmm0,0x1c0(%rax)
+ 44c:	0f 11 88 d0 01 00 00 	movups %xmm1,0x1d0(%rax)
+ 453:	0f 10 82 e0 01 00 00 	movups 0x1e0(%rdx),%xmm0
+ 45a:	0f 10 8a f0 01 00 00 	movups 0x1f0(%rdx),%xmm1
+ 461:	0f 11 80 e0 01 00 00 	movups %xmm0,0x1e0(%rax)
+ 468:	0f 11 88 f0 01 00 00 	movups %xmm1,0x1f0(%rax)
+ 46f:	31 c0                	xor    %eax,%eax
+ 471:	5d                   	pop    %rbp
+ 472:	c3                   	ret    
+ 473:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+ 47a:	00 00 00 
+ 47d:	0f 1f 00             	nopl   (%rax)
+
+0000000000000480 <mcs_block_read>:
+ 480:	55                   	push   %rbp
+ 481:	48 89 e5             	mov    %rsp,%rbp
+ 484:	48 8b 47 08          	mov    0x8(%rdi),%rax
+ 488:	5d                   	pop    %rbp
+ 489:	ff e0                	jmp    *%rax
+ 48b:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+
+0000000000000490 <mcs_block_write>:
+ 490:	55                   	push   %rbp
+ 491:	48 89 e5             	mov    %rsp,%rbp
+ 494:	48 8b 47 10          	mov    0x10(%rdi),%rax
+ 498:	5d                   	pop    %rbp
+ 499:	ff e0                	jmp    *%rax

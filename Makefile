@@ -908,3 +908,94 @@ m13-audit:
 m13-all: m13-host m13-freestanding m13-audit
 
 >echo "[M13] VFS/RAMFS milestone PASS"
+
+# ============================================================================
+# M14 TARGETS
+# ============================================================================
+
+M14_BUILD_DIR := build/m14
+
+M14_HOST_TEST := $(M14_BUILD_DIR)/m14_host_test
+
+M14_HOST_SRCS := \
+kernel/block/m14_ramblk.c \
+tests/m14/m14_host_test.c
+
+.PHONY: m14-host
+m14-host:
+>mkdir -p $(M14_BUILD_DIR)
+>clang \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -Ikernel/include \
+>   $(M14_HOST_SRCS) \
+>   -o $(M14_HOST_TEST)
+
+>./$(M14_HOST_TEST) \
+>   | tee build/m14_host_test.log
+
+>@echo "[M14] host test PASS"
+
+.PHONY: m14-freestanding
+m14-freestanding:
+>mkdir -p $(M14_BUILD_DIR)
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/block/m14_ramblk.c \
+>   -o $(M14_BUILD_DIR)/m14_ramblk.o
+
+>ld.lld -r \
+>   $(M14_BUILD_DIR)/m14_ramblk.o \
+>   -o $(M14_BUILD_DIR)/m14_block_combined.o
+
+>@echo "[M14] freestanding PASS" \
+>   | tee build/m14_freestanding.log
+
+.PHONY: m14-audit
+m14-audit:
+>nm -u $(M14_BUILD_DIR)/m14_block_combined.o \
+>   > build/m14_nm_undefined.txt
+
+>test ! -s build/m14_nm_undefined.txt
+
+>readelf -h $(M14_BUILD_DIR)/m14_block_combined.o \
+>   > build/m14_readelf_header.txt
+
+>objdump -dr $(M14_BUILD_DIR)/m14_block_combined.o \
+>   > build/m14_objdump.txt
+
+>sha256sum \
+>   $(M14_BUILD_DIR)/m14_block_combined.o \
+>   kernel/include/mcsos/block/mcs_block.h \
+>   kernel/block/m14_ramblk.c \
+>   tests/m14/m14_host_test.c \
+>   > build/m14_sha256.txt
+
+>grep -q 'ELF64' build/m14_readelf_header.txt
+
+>grep -q 'mcs_block_read' build/m14_objdump.txt
+
+>@echo "[M14] audit PASS" \
+>   | tee build/m14_audit.log
+
+.PHONY: m14-all
+m14-all: m14-host m14-freestanding m14-audit
+
+>bash scripts/m14_preflight.sh
+
+>@echo "M14 host tests PASS"
