@@ -14,6 +14,8 @@
 #include <mcsos/kernel/kmem.h>
 #include <mcsos/kernel/thread.h>
 
+#include <mcsos/sync/mcs_sync.h>
+
 extern char __kernel_start[];
 extern char __kernel_end[];
 
@@ -34,6 +36,59 @@ static vmm_pte_t kernel_tables[512 * 8];
 
 static uint8_t m8_boot_heap[M8_BOOT_HEAP_SIZE]
     __attribute__((aligned(4096)));
+
+static struct mcs_spinlock m12_boot_lock;
+
+static struct mcs_mutex m12_boot_mutex;
+
+static uint64_t m12_boot_counter;
+
+static void m12_sync_selftest(void)
+{
+    mcs_spin_init(
+        &m12_boot_lock
+    );
+
+    mcs_mutex_init(
+        &m12_boot_mutex
+    );
+
+    mcs_spin_lock(
+        &m12_boot_lock
+    );
+
+    ++m12_boot_counter;
+
+    mcs_spin_unlock(
+        &m12_boot_lock
+    );
+
+    mcs_mutex_lock(
+        &m12_boot_mutex
+    );
+
+    ++m12_boot_counter;
+
+    mcs_mutex_unlock(
+        &m12_boot_mutex
+    );
+
+    m12_lockdep_acquire();
+
+    KERNEL_ASSERT(
+        m12_lockdep_depth() == 1
+    );
+
+    m12_lockdep_release();
+
+    KERNEL_ASSERT(
+        m12_lockdep_depth() == 0
+    );
+
+    log_writeln(
+        "[M12] sync selftest passed"
+    );
+}
 
 static void m5_selftest(void) {
 
@@ -139,7 +194,7 @@ void kmain(void) {
     log_write(MCSOS_VERSION);
     log_write(" ");
     log_write(MCSOS_MILESTONE);
-    log_writeln(" [M9] cooperative scheduler stress test");
+    log_writeln(" [M12] synchronization subsystem");
 
     log_key_value_hex64(
         "kernel_start",
@@ -203,6 +258,8 @@ void kmain(void) {
     log_writeln("");
 
     m8_heap_bootstrap();
+
+    m12_sync_selftest();
 
     thread_system_init();
 

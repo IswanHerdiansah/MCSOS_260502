@@ -1,0 +1,4 @@
+PASS spinlock acquire/release
+PASS mutex acquire/release
+PASS lockdep depth tracking
+[PASS] M12 synchronization host tests passed.

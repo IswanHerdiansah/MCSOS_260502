@@ -692,3 +692,137 @@ m11-all: \
 >@echo "======================================"
 >@echo "[M11] ELF loader milestone PASS"
 >@echo "======================================"
+
+# ============================================================================
+# M12 TARGETS
+# ============================================================================
+
+M12_BUILD_DIR := build/m12
+
+.PHONY: m12-clean
+m12-clean:
+>rm -rf build/m12
+
+build/m12:
+>mkdir -p build/m12
+
+.PHONY: m12-host-test
+m12-host-test: build/m12
+
+>clang \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -Ikernel/include \
+>   kernel/sync/m12_spinlock.c \
+>   kernel/sync/m12_mutex.c \
+>   kernel/sync/m12_lockdep.c \
+>   tests/m12/m12_host_test.c \
+>   -o build/m12/m12_host_test
+
+>./build/m12/m12_host_test \
+>   | tee build/m12_host_test.log
+
+>@echo "[M12] host test PASS"
+
+.PHONY: m12-freestanding
+m12-freestanding: build/m12
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/sync/m12_spinlock.c \
+>   -o build/m12/m12_spinlock.o
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/sync/m12_mutex.c \
+>   -o build/m12/m12_mutex.o
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/sync/m12_lockdep.c \
+>   -o build/m12/m12_lockdep.o
+
+>ld.lld -r \
+>   build/m12/m12_spinlock.o \
+>   build/m12/m12_mutex.o \
+>   build/m12/m12_lockdep.o \
+>   -o build/m12/m12_sync_combined.o
+
+>@echo "[M12] freestanding PASS"
+
+.PHONY: m12-audit
+m12-audit: m12-freestanding
+
+>nm -u build/m12/m12_sync_combined.o \
+>   > build/m12_nm_undefined.txt
+
+>test ! -s build/m12_nm_undefined.txt
+
+>readelf -h build/m12/m12_sync_combined.o \
+>   > build/m12_readelf_header.txt
+
+>objdump -dr build/m12/m12_sync_combined.o \
+>   > build/m12_objdump.txt
+
+>sha256sum \
+>   build/m12/m12_sync_combined.o \
+>   kernel/include/mcsos/sync/mcs_sync.h \
+>   kernel/sync/m12_spinlock.c \
+>   kernel/sync/m12_mutex.c \
+>   kernel/sync/m12_lockdep.c \
+>   tests/m12/m12_host_test.c \
+>   > build/m12_sha256.txt
+
+>grep -q 'ELF64' build/m12_readelf_header.txt
+
+>grep -q 'mcs_spin_lock' build/m12_objdump.txt
+
+>echo "[M12] audit PASS" \
+>   | tee build/m12_audit.log
+
+.PHONY: m12-all
+m12-all: \
+m12-host-test \
+m12-audit
+
+>bash scripts/m12_preflight.sh
+
+>@echo "======================================"
+>@echo "[M12] synchronization milestone PASS"
+>@echo "======================================"

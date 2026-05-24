@@ -1,0 +1,120 @@
+
+build/m12/m12_sync_combined.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <mcs_spin_init>:
+   0:	55                   	push   %rbp
+   1:	48 89 e5             	mov    %rsp,%rbp
+   4:	c7 07 00 00 00 00    	movl   $0x0,(%rdi)
+   a:	5d                   	pop    %rbp
+   b:	c3                   	ret    
+   c:	0f 1f 40 00          	nopl   0x0(%rax)
+
+0000000000000010 <mcs_spin_try_lock>:
+  10:	55                   	push   %rbp
+  11:	48 89 e5             	mov    %rsp,%rbp
+  14:	b9 01 00 00 00       	mov    $0x1,%ecx
+  19:	87 0f                	xchg   %ecx,(%rdi)
+  1b:	31 c0                	xor    %eax,%eax
+  1d:	85 c9                	test   %ecx,%ecx
+  1f:	0f 94 c0             	sete   %al
+  22:	5d                   	pop    %rbp
+  23:	c3                   	ret    
+  24:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  2b:	00 00 00 
+  2e:	66 90                	xchg   %ax,%ax
+
+0000000000000030 <mcs_spin_lock>:
+  30:	55                   	push   %rbp
+  31:	48 89 e5             	mov    %rsp,%rbp
+  34:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  3b:	00 00 00 
+  3e:	66 90                	xchg   %ax,%ax
+  40:	b8 01 00 00 00       	mov    $0x1,%eax
+  45:	87 07                	xchg   %eax,(%rdi)
+  47:	85 c0                	test   %eax,%eax
+  49:	74 04                	je     4f <mcs_spin_lock+0x1f>
+  4b:	f3 90                	pause  
+  4d:	eb f1                	jmp    40 <mcs_spin_lock+0x10>
+  4f:	5d                   	pop    %rbp
+  50:	c3                   	ret    
+  51:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  58:	00 00 00 
+  5b:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
+
+0000000000000060 <mcs_spin_unlock>:
+  60:	55                   	push   %rbp
+  61:	48 89 e5             	mov    %rsp,%rbp
+  64:	c7 07 00 00 00 00    	movl   $0x0,(%rdi)
+  6a:	5d                   	pop    %rbp
+  6b:	c3                   	ret    
+  6c:	cc                   	int3   
+  6d:	cc                   	int3   
+  6e:	cc                   	int3   
+  6f:	cc                   	int3   
+
+0000000000000070 <mcs_mutex_init>:
+  70:	55                   	push   %rbp
+  71:	48 89 e5             	mov    %rsp,%rbp
+  74:	c7 07 00 00 00 00    	movl   $0x0,(%rdi)
+  7a:	5d                   	pop    %rbp
+  7b:	c3                   	ret    
+  7c:	0f 1f 40 00          	nopl   0x0(%rax)
+
+0000000000000080 <mcs_mutex_lock>:
+  80:	55                   	push   %rbp
+  81:	48 89 e5             	mov    %rsp,%rbp
+  84:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+  8b:	00 00 00 
+  8e:	66 90                	xchg   %ax,%ax
+  90:	b8 01 00 00 00       	mov    $0x1,%eax
+  95:	87 07                	xchg   %eax,(%rdi)
+  97:	85 c0                	test   %eax,%eax
+  99:	75 f5                	jne    90 <mcs_mutex_lock+0x10>
+  9b:	5d                   	pop    %rbp
+  9c:	c3                   	ret    
+  9d:	0f 1f 00             	nopl   (%rax)
+
+00000000000000a0 <mcs_mutex_unlock>:
+  a0:	55                   	push   %rbp
+  a1:	48 89 e5             	mov    %rsp,%rbp
+  a4:	c7 07 00 00 00 00    	movl   $0x0,(%rdi)
+  aa:	5d                   	pop    %rbp
+  ab:	c3                   	ret    
+  ac:	cc                   	int3   
+  ad:	cc                   	int3   
+  ae:	cc                   	int3   
+  af:	cc                   	int3   
+
+00000000000000b0 <m12_lockdep_acquire>:
+  b0:	55                   	push   %rbp
+  b1:	48 89 e5             	mov    %rsp,%rbp
+  b4:	83 05 00 00 00 00 01 	addl   $0x1,0x0(%rip)        # bb <m12_lockdep_acquire+0xb>
+			b6: R_X86_64_PC32	.bss-0x5
+  bb:	5d                   	pop    %rbp
+  bc:	c3                   	ret    
+  bd:	0f 1f 00             	nopl   (%rax)
+
+00000000000000c0 <m12_lockdep_release>:
+  c0:	55                   	push   %rbp
+  c1:	48 89 e5             	mov    %rsp,%rbp
+  c4:	8b 05 00 00 00 00    	mov    0x0(%rip),%eax        # ca <m12_lockdep_release+0xa>
+			c6: R_X86_64_PC32	.bss-0x4
+  ca:	85 c0                	test   %eax,%eax
+  cc:	74 09                	je     d7 <m12_lockdep_release+0x17>
+  ce:	83 c0 ff             	add    $0xffffffff,%eax
+  d1:	89 05 00 00 00 00    	mov    %eax,0x0(%rip)        # d7 <m12_lockdep_release+0x17>
+			d3: R_X86_64_PC32	.bss-0x4
+  d7:	5d                   	pop    %rbp
+  d8:	c3                   	ret    
+  d9:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+
+00000000000000e0 <m12_lockdep_depth>:
+  e0:	55                   	push   %rbp
+  e1:	48 89 e5             	mov    %rsp,%rbp
+  e4:	8b 05 00 00 00 00    	mov    0x0(%rip),%eax        # ea <m12_lockdep_depth+0xa>
+			e6: R_X86_64_PC32	.bss-0x4
+  ea:	5d                   	pop    %rbp
+  eb:	c3                   	ret    
