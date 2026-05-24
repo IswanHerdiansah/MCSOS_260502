@@ -1,0 +1,7 @@
+PASS valid ELF64 image: M11_OK
+PASS valid plan fields: entry=0x401000 segments=2
+PASS bad magic: M11_ERR_MAGIC
+PASS bad machine: M11_ERR_MACHINE
+PASS entry outside user range: M11_ERR_ENTRY
+PASS memsz below filesz: M11_ERR_SEGBOUNDS
+M11 host tests passed.

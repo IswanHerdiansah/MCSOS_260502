@@ -599,3 +599,96 @@ m10-all: m10-host-test m10-freestanding m10-audit
 >@echo "======================================"
 >@echo "[M10] syscall milestone PASS"
 >@echo "======================================"
+
+# ============================================================================
+# M11 TARGETS
+# ============================================================================
+
+M11_BUILD_DIR := build/m11
+
+.PHONY: m11-clean
+m11-clean:
+>rm -rf build/m11
+
+build/m11:
+>mkdir -p build/m11
+
+.PHONY: m11-host-test
+m11-host-test: build/m11
+
+>clang \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -Ikernel/include \
+>   kernel/user/m11_elf_loader.c \
+>   tests/m11/m11_host_test.c \
+>   -o build/m11/m11_host_test
+
+>./build/m11/m11_host_test \
+>   | tee build/m11_host_test.log
+
+>@echo "[M11] host test PASS"
+
+.PHONY: m11-freestanding
+m11-freestanding: build/m11
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/user/m11_elf_loader.c \
+>   -o build/m11/m11_elf_loader.o \
+>   | tee build/m11_freestanding.log
+
+>@echo "[M11] freestanding PASS"
+
+.PHONY: m11-audit
+m11-audit: m11-freestanding
+
+>nm -u build/m11/m11_elf_loader.o \
+>   > build/m11_nm_undefined.txt
+
+>test ! -s build/m11_nm_undefined.txt
+
+>readelf -h build/m11/m11_elf_loader.o \
+>   > build/m11_readelf_header.txt
+
+>objdump -dr build/m11/m11_elf_loader.o \
+>   > build/m11_objdump.txt
+
+>sha256sum \
+>   build/m11/m11_elf_loader.o \
+>   kernel/user/m11_elf_loader.c \
+>   kernel/include/mcsos/user/m11_elf_loader.h \
+>   tests/m11/m11_host_test.c \
+>   > build/m11_sha256.txt
+
+>grep -q 'ELF64' build/m11_readelf_header.txt
+
+>grep -q 'm11_elf64_plan_load' build/m11_objdump.txt
+
+>echo "[M11] audit PASS" \
+>   | tee build/m11_audit.log
+
+.PHONY: m11-all
+m11-all: \
+	m11-host-test \
+	m11-audit
+
+>bash scripts/m11_preflight.sh
+
+>@echo "======================================"
+>@echo "[M11] ELF loader milestone PASS"
+>@echo "======================================"
