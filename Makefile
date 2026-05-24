@@ -494,9 +494,7 @@ m9-audit: m9-freestanding
 .PHONY: m9-all
 m9-all: m9-host-test m9-audit
 
->@echo "======================================"
 >@echo "[M9] scheduler milestone PASS"
->@echo "======================================"
 
 # ============================================================================
 # M10 TARGETS
@@ -596,9 +594,7 @@ m10-audit: build/m10
 .PHONY: m10-all
 m10-all: m10-host-test m10-freestanding m10-audit
 >bash scripts/m10_preflight.sh
->@echo "======================================"
 >@echo "[M10] syscall milestone PASS"
->@echo "======================================"
 
 # ============================================================================
 # M11 TARGETS
@@ -689,9 +685,7 @@ m11-all: \
 
 >bash scripts/m11_preflight.sh
 
->@echo "======================================"
 >@echo "[M11] ELF loader milestone PASS"
->@echo "======================================"
 
 # ============================================================================
 # M12 TARGETS
@@ -823,6 +817,94 @@ m12-audit
 
 >bash scripts/m12_preflight.sh
 
->@echo "======================================"
 >@echo "[M12] synchronization milestone PASS"
->@echo "======================================"
+
+M13_BUILD_DIR := build/m13
+
+M13_HOST_TEST := $(M13_BUILD_DIR)/m13_host_test
+
+M13_HOST_SRCS := \
+kernel/fs/m13_ramfs.c \
+kernel/fs/m13_vfs.c \
+tests/m13/m13_host_test.c
+
+.PHONY: m13-host
+m13-host:
+>mkdir -p $(M13_BUILD_DIR)
+>clang \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -Ikernel/include \
+>   $(M13_HOST_SRCS) \
+>   -o $(M13_HOST_TEST)
+>./$(M13_HOST_TEST) \
+>   | tee build/m13_host_test.log
+
+.PHONY: m13-freestanding
+m13-freestanding:
+>mkdir -p $(M13_BUILD_DIR)
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/fs/m13_ramfs.c \
+>   -o $(M13_BUILD_DIR)/m13_ramfs.o
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/fs/m13_vfs.c \
+>   -o $(M13_BUILD_DIR)/m13_vfs.o
+>ld.lld -r \
+>   $(M13_BUILD_DIR)/m13_ramfs.o \
+>   $(M13_BUILD_DIR)/m13_vfs.o \
+>   -o $(M13_BUILD_DIR)/m13_vfs_combined.o
+>@echo "[M13] freestanding PASS" \
+>   | tee build/m13_freestanding.log
+
+.PHONY: m13-audit
+m13-audit:
+>nm -u $(M13_BUILD_DIR)/m13_vfs_combined.o \
+>   > build/m13_nm_undefined.txt
+>test ! -s build/m13_nm_undefined.txt
+>readelf -h $(M13_BUILD_DIR)/m13_vfs_combined.o \
+>   > build/m13_readelf_header.txt
+>objdump -dr $(M13_BUILD_DIR)/m13_vfs_combined.o \
+>   > build/m13_objdump.txt
+>sha256sum \
+>   $(M13_BUILD_DIR)/m13_vfs_combined.o \
+>   kernel/include/mcsos/vfs/mcs_vfs.h \
+>   kernel/fs/m13_ramfs.c \
+>   kernel/fs/m13_vfs.c \
+>   tests/m13/m13_host_test.c \
+>   > build/m13_sha256.txt
+>grep -q 'ELF64' build/m13_readelf_header.txt
+>grep -q 'mcs_vfs_open' build/m13_objdump.txt
+>@echo "[M13] audit PASS" \
+>   | tee build/m13_audit.log
+
+.PHONY: m13-all
+m13-all: m13-host m13-freestanding m13-audit
+
+>echo "[M13] VFS/RAMFS milestone PASS"
