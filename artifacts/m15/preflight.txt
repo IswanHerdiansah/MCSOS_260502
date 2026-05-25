@@ -1,0 +1,24 @@
+== git ==
+ M Makefile
+A  evidence/M14/gdb/gdb_m14_session.txt
+?? artifacts/
+?? evidence/M15/
+?? fs/
+?? kernel/fs/m15_mcsfs1.c
+?? kernel/include/mcsos/fs/
+?? scripts/m15_preflight.sh
+?? tests/m15/
+921872f
+== toolchain ==
+Ubuntu clang version 14.0.0-1ubuntu1.1
+Ubuntu LLD 14.0.0 (compatible with GNU linkers)
+GNU nm (GNU Binutils for Ubuntu) 2.38
+GNU readelf (GNU Binutils for Ubuntu) 2.38
+GNU objdump (GNU Binutils for Ubuntu) 2.38
+GNU Make 4.3
+== prior artifacts ==
+evidence/M3: present
+evidence/M4: present
+evidence/M12: present
+evidence/M13: present
+evidence/M14: present

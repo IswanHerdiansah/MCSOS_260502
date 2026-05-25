@@ -999,3 +999,97 @@ m14-all: m14-host m14-freestanding m14-audit
 >bash scripts/m14_preflight.sh
 
 >@echo "M14 host tests PASS"
+
+# ============================================================================
+# M15 TARGETS
+# ============================================================================
+
+M15_BUILD_DIR := artifacts/m15
+
+.PHONY: m15-clean
+m15-clean:
+>rm -rf artifacts/m15
+
+$(M15_BUILD_DIR):
+>mkdir -p artifacts/m15
+
+.PHONY: m15-host-test
+m15-host-test: $(M15_BUILD_DIR)
+
+>clang \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -g \
+>   -Ifs/mcsfs1 \
+>   tests/m15/test_mcsfs1.c \
+>   fs/mcsfs1/mcsfs1.c \
+>   -o artifacts/m15/test_mcsfs1
+
+>./artifacts/m15/test_mcsfs1 \
+>   | tee artifacts/m15/host_test.txt
+
+>@echo "[M15] host test PASS"
+
+.PHONY: m15-freestanding
+m15-freestanding: $(M15_BUILD_DIR)
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -g \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ifs/mcsfs1 \
+>   -c fs/mcsfs1/mcsfs1.c \
+>   -o artifacts/m15/mcsfs1.o
+
+>ld.lld -r \
+>   artifacts/m15/mcsfs1.o \
+>   -o artifacts/m15/mcsfs1.rel.o
+
+>@echo "[M15] freestanding PASS"
+
+.PHONY: m15-audit
+m15-audit: m15-freestanding
+
+>nm -u artifacts/m15/mcsfs1.rel.o \
+>   | tee artifacts/m15/nm_undefined.txt
+
+>test ! -s artifacts/m15/nm_undefined.txt
+
+>readelf -h artifacts/m15/mcsfs1.rel.o \
+>   | tee artifacts/m15/readelf_header.txt
+
+>objdump -dr artifacts/m15/mcsfs1.rel.o \
+>   | tee artifacts/m15/objdump.txt \
+>   >/dev/null
+
+>sha256sum \
+>   artifacts/m15/test_mcsfs1 \
+>   artifacts/m15/mcsfs1.o \
+>   artifacts/m15/mcsfs1.rel.o \
+>   fs/mcsfs1/mcsfs1.c \
+>   fs/mcsfs1/mcsfs1.h \
+>   tests/m15/test_mcsfs1.c \
+>   | tee artifacts/m15/SHA256SUMS.txt
+
+>@echo "[M15] audit PASS"
+
+.PHONY: m15-all
+m15-all: \
+m15-host-test \
+m15-audit
+
+>bash scripts/m15_preflight.sh
+
+>@echo "[M15] MCSFS1 milestone PASS"
