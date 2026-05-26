@@ -1093,3 +1093,103 @@ m15-audit
 >bash scripts/m15_preflight.sh
 
 >@echo "[M15] MCSFS1 milestone PASS"
+
+
+# ============================================================================
+# M16 TARGETS
+# ============================================================================
+
+M16_BUILD_DIR := build/m16
+
+.PHONY: m16-clean
+m16-clean:
+>rm -rf build/m16
+
+build/m16:
+>mkdir -p build/m16
+
+.PHONY: m16-host
+m16-host: build/m16
+
+>clang \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -Ikernel/include \
+>   kernel/fs/m16_journal.c \
+>   tests/m16/m16_host_test.c \
+>   -o build/m16/m16_host_test
+
+>./build/m16/m16_host_test \
+>   | tee evidence/M16/m16_host_test.log
+
+>@echo "[M16] host PASS"
+
+.PHONY: m16-freestanding
+m16-freestanding: build/m16
+
+>clang \
+>   --target=x86_64-unknown-none-elf \
+>   -std=c17 \
+>   -Wall \
+>   -Wextra \
+>   -Werror \
+>   -O2 \
+>   -ffreestanding \
+>   -fno-builtin \
+>   -fno-stack-protector \
+>   -fno-pic \
+>   -mno-red-zone \
+>   -Ikernel/include \
+>   -c kernel/fs/m16_journal.c \
+>   -o build/m16/m16_journal.o
+
+>ld.lld -r \
+>   build/m16/m16_journal.o \
+>   -o build/m16/m16_journal_combined.o
+
+>@echo "[M16] freestanding PASS"
+
+.PHONY: m16-audit
+m16-audit: m16-freestanding
+
+>nm -u build/m16/m16_journal_combined.o \
+>   > evidence/M16/m16_nm_undefined.txt
+
+>test ! -s evidence/M16/m16_nm_undefined.txt
+
+>readelf -h \
+>   build/m16/m16_journal_combined.o \
+>   > evidence/M16/m16_readelf_header.txt
+
+>objdump -dr \
+>   build/m16/m16_journal_combined.o \
+>   > evidence/M16/m16_objdump.txt
+
+>sha256sum \
+>   build/m16/m16_journal.o \
+>   build/m16/m16_journal_combined.o \
+>   build/m16/m16_host_test \
+>   kernel/fs/m16_journal.c \
+>   kernel/include/mcsos/fs/m16_journal.h \
+>   tests/m16/m16_host_test.c \
+>   > evidence/M16/m16_sha256.txt
+
+>grep -q 'ELF64' \
+>   evidence/M16/m16_readelf_header.txt
+
+>grep -q 'm16_journal_replay' \
+>   evidence/M16/m16_objdump.txt
+
+>@echo "[M16] audit PASS"
+
+.PHONY: m16-all
+m16-all: \
+m16-host \
+m16-audit
+
+>bash scripts/m16_preflight.sh
+
+>@echo "[M16] journaling milestone PASS"
