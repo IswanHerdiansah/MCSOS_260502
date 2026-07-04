@@ -1,4 +1,4 @@
-name: M1 Toolchain Check
+name: M16 Toolchain Check
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install dependencies
@@ -22,5 +22,5 @@ jobs:
             python3 \
             file
 
-      - name: Run M1 test
-        run: make test
+      - name: Run M16 tests
+        run: make m16-all
